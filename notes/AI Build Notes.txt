@@ -1,0 +1,60 @@
+blzbak
+
+Networked automated backup system 
+
+AI build notes (prompts)
+
+Claude Sonnet 4.6
+
+Hello, our project, named blzbak, is going to be an Automated backup system.  The github repo has already been created and the project is open on VS Code running on Ubuntu 24.04 where you, Claude Sonnet 4.6 is being accessed. The project consists of three main parts.  
+
+1) A command line utility that can be used to create backup sets, run the sets manually, and install cron jobs for automated running of backups.  The command line utility can be used to restore backups, by filename, foldername or entire backup set.  The backup will be configured to create daily snapshots. 
+
+2) A linux daemon which listens on a TCP/IP port for files being backed up or restore requests.
+
+3) A QT GUI front end which can use the command line utility to list existing backup sets.  Create and.or edit them.  To list the backup cron jobs and create or edit those also.
+
+First we will work on (1) the command line utility.  Ask me any design questions if you have them.  Lets get started.
+
+
+
+>>>>>>>>>>>>>>>>>>
+Welcome! Before diving in, I have some focused design questions:
+
+Language & Tech
+
+What language for the CLI? (Python, Go, Rust, C/C++, Bash, or other?)
+Backup Mechanics
+2. Where are backups stored — local filesystem, remote SSH/SFTP, or both?
+3. What backup strategy for daily snapshots — rsync with hard-link snapshots (like rsnapshot), tar archives, or something else?
+4. Should backups be compressed? Encrypted?
+
+Configuration
+5. Where should backup set configs be stored — e.g., /etc/blzbak/ (system-wide) or ~/.config/blzbak/ (per-user), or both?
+6. Config file format preference — YAML, TOML, JSON, INI?
+
+Retention & Behavior
+7. How many daily snapshots should be retained per backup set (configurable, or a fixed default)?
+8. Should exclusion patterns (like .gitignore-style) be supported per backup set?
+
+Restore
+9. When restoring by filename/foldername, should it restore to the original path, a user-specified path, or prompt?
+10. Should the restore be able to browse/list available snapshots interactively, or is it strictly by date/snapshot name?
+
+Daemon Interaction (for part 1 scope)
+11. Should the CLI in part 1 communicate with the daemon (part 2) when it's running, or operate independently on the filesystem directly?
+
+<<<<<<<<<<<<<<<<<
+1) Python
+2) A linux server on the LAN
+2,3) Two full rsynced backups will be retained on the server ((C)current and (O)once removed).  The remote utility will first inform the server a new backup is about to be made.  The server will create a set of diff files between the C and O backups.  Then since the previous full copy can be recreated from the diff files that have been made, the C and O backups on the server will be rsynced to be identical.  After that is completed the remote utility will rsync to the (C) backup on the server.
+4) We will address backup compression if a future iteration, not yet.
+5) A .config file located in the same place as the linux daemon executable file contains the base location for the backups, it will default to /blzbak at installation time or if no .config is found.
+6) YAML
+7) Snapshots will be configurable, daily is default, but could be whatever is possible in  CRON.  There will be a .config file for the remote command line utility also stored in same place as executable.
+8) Yes lets use same patterns as gitignore and put the file .blzbak-ignore in the same location as the executable.  Note that config and ignore setting will be stored in each backup set so that future changes to the .config and .blzbak-ignore files will not affect existing backup sets.  
+9) Restorations will default to the original location unless specified otherwise.  Prompt if not specified, a simple enter key for original or the alternate base location will be entered at the prompt unless specified by command line option.
+10) The GUI will allow for the browsing of available snapshots.  All the backup functions, listing of backup sets, backup instances, and folders files can be done through the command line utility as well.  The GUI will perform all its functions by calling this utility with command line arguments and an optional window in the GUI that can be opened to peek in on what is happening behind the scenes with the calls to the command line utility.
+11) The CLI must communicate with the with the daemon, one to get lists of existing backups when needed, and also as described before when it needs to prepare for a new backup about to be performed.  The daemon will have one thread for listening for the client (remote) messages and another thread to perform the DIFF required before a new fsync is run from the client.  The first thing CLI does when being run is establish a communication channel with the daemon on the server.
+
+

@@ -216,3 +216,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# a general pattern for all ODF lock files
+.~lock.*#
+
+#github (for copilot skills)
+.github/
+
+#vscode workdspace
+*.code-workspace
+
+#AI Prompts
+prompts.txt
+
+#work log
+work_log.txt
+
+#vscode settings    
+.vscode/    
