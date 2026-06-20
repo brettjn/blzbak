@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "blzbak"
@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 blzbak = "blzbak.cli:main"
+blzbakd = "blzbak.daemon.cli:main"
 
 [project.optional-dependencies]
 dev = [

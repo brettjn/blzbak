@@ -1,0 +1,23 @@
+# Example daemon configuration for blzbakd
+# Place this file as .config in the same directory as the blzbakd executable
+# or specify its location with: blzbakd --config /path/to/config.yaml
+
+# Base directory for storing backups (default: /blzbak)
+base_path: /blzbak
+
+# TCP port for the daemon to listen on (default: 7890)
+port: 7890
+
+# Host/interface to bind to (default: 0.0.0.0 for all interfaces)
+# Use 127.0.0.1 to only accept local connections
+host: 0.0.0.0
+
+# Maximum number of worker threads (default: 4)
+max_workers: 4
+
+# Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
+log_level: INFO
+
+# Directory for storing diff archives (default: {base_path}/diffs)
+# Uncomment to override:
+# diff_dir: /var/backups/blzbak/diffs

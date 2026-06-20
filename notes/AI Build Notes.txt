@@ -57,4 +57,539 @@ Daemon Interaction (for part 1 scope)
 10) The GUI will allow for the browsing of available snapshots.  All the backup functions, listing of backup sets, backup instances, and folders files can be done through the command line utility as well.  The GUI will perform all its functions by calling this utility with command line arguments and an optional window in the GUI that can be opened to peek in on what is happening behind the scenes with the calls to the command line utility.
 11) The CLI must communicate with the with the daemon, one to get lists of existing backups when needed, and also as described before when it needs to prepare for a new backup about to be performed.  The daemon will have one thread for listening for the client (remote) messages and another thread to perform the DIFF required before a new fsync is run from the client.  The first thing CLI does when being run is establish a communication channel with the daemon on the server.
 
+]]]]]]]]]]]]]]]]]]] Terminal output
+blizz@orbix:~/proj/blzbak/blzbak$  pip install -e ".[dev]" -q 2>&1 | tail -5
+Command 'pip' not found, but can be installed with:
+sudo apt install python3-pip
+blizz@orbix:~/proj/blzbak/blzbak$  python3 -m pip install -e ".[dev]" -q 2>&1 | tail -8
+/usr/bin/python3: No module named pip
+blizz@orbix:~/proj/blzbak/blzbak$  which python3 && python3 --version && python3 -c "import sys; print(sys.path)"
+/usr/bin/python3
+Python 3.12.3
+['', '/usr/lib/python312.zip', '/usr/lib/python3.12', '/usr/lib/python3.12/lib-dynload', '/usr/local/lib/python3.12/dist-packages', '/usr/lib/python3/dist-packages']
+blizz@orbix:~/proj/blzbak/blzbak$  python3 -m venv .venv && .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1310, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'setuptools.backends'
+
+blizz@orbix:~/proj/blzbak/blzbak$  .venv/bin/python -c "import setuptools; print(setuptools.__version__)"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'setuptools'
+blizz@orbix:~/proj/blzbak/blzbak$  .venv/bin/pip install --upgrade pip setuptools wheel -q && .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+    return "build_editable" in self.pep517_backend._supported_features()
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/blizz/proj/blzbak/blzbak/.venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_impl.py", line 180, in _supported_features
+    return self._call_hook("_supported_features", {})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/blizz/proj/blzbak/blzbak/.venv/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/_impl.py", line 402, in _call_hook
+    raise BackendUnavailable(
+blizz@orbix:~/proj/blzbak/blzbak$  .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+blizz@orbix:~/proj/blzbak/blzbak$  .venv/bin/pytest tests/ -v 2>&1
+====================================================================================================== test session starts =======================================================================================================
+platform linux -- Python 3.12.3, pytest-9.1.0, pluggy-1.6.0 -- /home/blizz/proj/blzbak/blzbak/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/blizz/proj/blzbak/blzbak
+configfile: pyproject.toml
+plugins: cov-7.1.0
+collected 25 items                                                                                                                                                                                                               
+
+tests/test_config.py::test_load_config_defaults PASSED                                                                                                                                                                     [  4%]
+tests/test_config.py::test_load_config_file_overrides PASSED                                                                                                                                                               [  8%]
+tests/test_config.py::test_load_config_partial_override PASSED                                                                                                                                                             [ 12%]
+tests/test_config.py::test_load_ignore_patterns PASSED                                                                                                                                                                     [ 16%]
+tests/test_config.py::test_load_ignore_patterns_skips_blank_and_comments PASSED                                                                                                                                            [ 20%]
+tests/test_config.py::test_load_ignore_patterns_missing PASSED                                                                                                                                                             [ 24%]
+tests/test_config.py::test_deep_merge_nested PASSED                                                                                                                                                                        [ 28%]
+tests/test_config.py::test_deep_merge_flat PASSED                                                                                                                                                                          [ 32%]
+tests/test_cron.py::test_make_entry_contains_schedule PASSED                                                                                                                                                               [ 36%]
+tests/test_cron.py::test_make_entry_contains_command PASSED                                                                                                                                                                [ 40%]
+tests/test_cron.py::test_make_entry_contains_tag PASSED                                                                                                                                                                    [ 44%]
+tests/test_cron.py::test_set_tag_name_present PASSED                                                                                                                                                                       [ 48%]
+tests/test_cron.py::test_set_tag_name_absent PASSED                                                                                                                                                                        [ 52%]
+tests/test_cron.py::test_list_cron_jobs PASSED                                                                                                                                                                             [ 56%]
+tests/test_cron.py::test_list_cron_jobs_empty PASSED                                                                                                                                                                       [ 60%]
+tests/test_cron.py::test_remove_cron_job_found PASSED                                                                                                                                                                      [ 64%]
+tests/test_cron.py::test_remove_cron_job_not_found PASSED                                                                                                                                                                  [ 68%]
+tests/test_cron.py::test_install_cron_job_replaces_existing PASSED                                                                                                                                                         [ 72%]
+tests/test_models.py::test_validate_set_name_valid PASSED                                                                                                                                                                  [ 76%]
+tests/test_models.py::test_validate_set_name_invalid PASSED                                                                                                                                                                [ 80%]
+tests/test_models.py::test_rsync_dest_with_user PASSED                                                                                                                                                                     [ 84%]
+tests/test_models.py::test_rsync_dest_without_user PASSED                                                                                                                                                                  [ 88%]
+tests/test_models.py::test_server_config_roundtrip PASSED                                                                                                                                                                  [ 92%]
+tests/test_models.py::test_backup_set_to_dict_keys PASSED                                                                                                                                                                  [ 96%]
+tests/test_models.py::test_backup_set_roundtrip PASSED                                                                                                                                                                     [100%]
+
+======================================================================================================= 25 passed in 0.06s =======================================================================================================
+blizz@orbix:~/proj/blzbak/blzbak$  .venv/bin/blzbak --help && echo "---" && .venv/bin/blzbak set --help && echo "---" && .venv/bin/blzbak restore --help
+usage: blzbak [-h] [--server HOST] [--port PORT] [--config FILE] [-v] [--no-daemon] COMMAND ...
+
+blzbak — Automated backup system
+
+positional arguments:
+  COMMAND
+    set          Manage backup set configurations
+    backup       Run backups and inspect backup history
+    restore      Restore files from backup
+    cron         Manage scheduled backup cron jobs
+
+options:
+  -h, --help     show this help message and exit
+  --server HOST  Override server hostname from config
+  --port PORT    Override daemon port from config
+  --config FILE  Path to CLI .config file
+  -v, --verbose  Enable verbose/debug output
+  --no-daemon    Skip daemon connection (valid only for local-only commands)
+---
+usage: blzbak set [-h] SUBCOMMAND ...
+
+positional arguments:
+  SUBCOMMAND
+    list      List all configured backup sets
+    create    Create a new backup set
+    show      Print backup set configuration as YAML
+    delete    Delete a backup set configuration
+    edit      Open backup set config in $EDITOR
+
+options:
+  -h, --help  show this help message and exit
+---
+usage: blzbak restore [-h] SUBCOMMAND ...
+
+positional arguments:
+  SUBCOMMAND
+    file      Restore a single file
+    folder    Restore a folder and its contents
+    set       Restore an entire backup set
+
+options:
+  -h, --help  show this help message and exit
+blizz@orbix:~/proj/blzbak/blzbak$ 
+
+
+}}}}}}}}}}}}}}}}} VS Code Output
+
+2026-06-15 09:27:24.413 [info] Python-envs extension version: 1.34.0
+2026-06-15 09:27:24.413 [info] 
+=== Python Envs Configuration Levels ===
+2026-06-15 09:27:24.413 [info] {
+  "section": "Python Envs Configuration Levels",
+  "defaultEnvManager": {
+    "workspaceFolderValue": "undefined",
+    "workspaceValue": "undefined",
+    "globalValue": "undefined",
+    "defaultValue": "ms-python.python:venv"
+  },
+  "defaultPackageManager": {
+    "workspaceFolderValue": "undefined",
+    "workspaceValue": "undefined",
+    "globalValue": "undefined",
+    "defaultValue": "ms-python.python:pip"
+  }
+}
+2026-06-15 09:27:24.413 [info] [pet] Starting Python Locator /home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/python-env-tools/bin/pet server
+2026-06-15 09:27:24.413 [info] Registering pyenv manager (environments will be discovered lazily)
+2026-06-15 09:27:24.413 [info] Registering pipenv manager (environments will be discovered lazily)
+2026-06-15 09:27:24.413 [info] Registering poetry manager (environments will be discovered lazily)
+2026-06-15 09:27:24.420 [error] [pet] Failed to find handler for method: info
+2026-06-15 09:27:24.430 [info] [pet] configure: Sending configuration update: {"workspaceDirectories":["/home/blizz/proj/blzbak/blzbak"],"environmentDirectories":["/home/blizz/proj/blzbak/blzbak/.venv","/home/blizz/proj/blzbak/blzbak/*/.venv"],"pipenvExecutable":"pipenv","poetryExecutable":"poetry","cacheDirectory":"/home/blizz/.config/Code/User/globalStorage/ms-python.vscode-python-envs/pythonLocator"}
+2026-06-15 09:27:24.443 [info] Refreshing Pyenv Environments
+2026-06-15 09:27:24.443 [info] Refreshing pyenv environments
+2026-06-15 09:27:24.443 [info] Refreshing Pipenv Environments
+2026-06-15 09:27:24.443 [info] Refreshing pipenv environments
+2026-06-15 09:27:24.443 [info] Refreshing Poetry Environments
+2026-06-15 09:27:24.443 [info] Refreshing poetry environments
+2026-06-15 09:27:24.459 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.467 [info] Conda not found, turning off conda features. [Error: Conda not found
+	at L (/home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/dist/extension.js:2:626500)
+	at runNextTicks (node:internal/process/task_queues:65:5)
+	at process.processImmediate (node:internal/timers:472:9)
+	at async V (/home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/dist/extension.js:2:626625)
+	at async t.registerCondaFeatures (/home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/dist/extension.js:2:646431)
+	at async t.safeRegister (/home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/dist/extension.js:2:290339)
+	at async Promise.all (index 1)
+	at async Immediate.<anonymous> (/home/blizz/.vscode/extensions/ms-python.vscode-python-envs-1.34.0-linux-x64/dist/extension.js:2:780447)]
+2026-06-15 09:27:24.469 [info] [interpreterSelection] Applying initial environment selection for 1 workspace folder(s)
+2026-06-15 09:27:24.485 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.496 [info] [SYS_SET] scope=/home/blizz/proj/blzbak/blzbak, project=/home/blizz/proj/blzbak/blzbak, normalizedKey=/home/blizz/proj/blzbak/blzbak, env=Python 3.12.3.final.0-vweuz8s2z2n
+2026-06-15 09:27:24.516 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.538 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.547 [info] [interpreterSelection] blzbak: Python 3.12.3.final.0 (source: autoDiscovery)
+2026-06-15 09:27:24.547 [info] [interpreterSelection] Workspace env resolved, deferring global scope to background
+2026-06-15 09:27:24.554 [info] Python API: Changed environment from undefined to Python 3.12.3.final.0 for: /home/blizz/proj/blzbak/blzbak
+2026-06-15 09:27:24.554 [info] Internal: Changed environment from undefined to Python 3.12.3.final.0 for: /home/blizz/proj/blzbak/blzbak
+2026-06-15 09:27:24.555 [info] Refreshing pyenv environments
+2026-06-15 09:27:24.557 [info] Pipenv not found via settings, cache, or PATH
+2026-06-15 09:27:24.557 [info] Refreshing pipenv environments
+2026-06-15 09:27:24.557 [info] Pipenv not found via settings, cache, or PATH
+2026-06-15 09:27:24.558 [info] Found 0 pipenv environments
+2026-06-15 09:27:24.559 [info] Pipenv not found via settings, cache, or PATH
+2026-06-15 09:27:24.560 [info] Refreshing poetry environments
+2026-06-15 09:27:24.560 [info] Poetry executable not found
+2026-06-15 09:27:24.561 [info] Environment discovery complete: 1 environments found (Global: 1)
+2026-06-15 09:27:24.562 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.567 [info] [interpreterSelection] global: Python 3.12.3.final.0 (source: autoDiscovery)
+2026-06-15 09:27:24.567 [info] Python API: Changed environment from undefined to Python 3.12.3.final.0 for: global
+2026-06-15 09:27:24.567 [info] Internal: Changed environment from undefined to Python 3.12.3.final.0 for: global
+2026-06-15 09:27:24.585 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.597 [info] Pipenv not found via settings, cache, or PATH
+2026-06-15 09:27:24.597 [info] Found 0 pipenv environments
+2026-06-15 09:27:24.632 [info] Discovered env: /usr/bin/python3
+2026-06-15 09:27:24.634 [info] Poetry executable not found
+2026-06-15 10:57:19.606 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:19.612 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:19.618 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:19.623 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:19.629 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:19.681 [info] Running: uv --version
+2026-06-15 10:57:19.687 [info] Running: /usr/bin/python3 -m pip list --format=json
+2026-06-15 10:57:19.696 [info] python: /usr/bin/python3: No module named pip
+
+2026-06-15 10:57:19.698 [error] Error running pip list Failed to run python -m pip list --format=json
+2026-06-15 10:57:19.698 [info] Package list retrieval attempted using pip, action can be done with uv if installed and setting `alwaysUseUv` is enabled.
+2026-06-15 10:57:19.698 [error] Error refreshing packages Failed to run python -m pip list --format=json
+2026-06-15 10:57:34.028 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:34.034 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:34.044 [info] Running: /usr/bin/python3 -m pip list --format=json
+2026-06-15 10:57:34.046 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:34.051 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:34.052 [info] python: /usr/bin/python3: No module named pip
+
+2026-06-15 10:57:34.054 [error] Error running pip list Failed to run python -m pip list --format=json
+2026-06-15 10:57:34.054 [info] Package list retrieval attempted using pip, action can be done with uv if installed and setting `alwaysUseUv` is enabled.
+2026-06-15 10:57:34.055 [error] Error refreshing packages Failed to run python -m pip list --format=json
+2026-06-15 10:57:34.056 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:48.552 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:48.558 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:48.562 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:48.567 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:57:48.572 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:02.728 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:02.734 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:02.739 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:02.743 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:02.748 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:04.813 [info] Running: /usr/bin/python3 -m pip list --format=json
+2026-06-15 10:58:04.821 [info] python: /usr/bin/python3: No module named pip
+
+2026-06-15 10:58:04.823 [error] Error running pip list Failed to run python -m pip list --format=json
+2026-06-15 10:58:04.823 [info] Package list retrieval attempted using pip, action can be done with uv if installed and setting `alwaysUseUv` is enabled.
+2026-06-15 10:58:04.823 [error] Error refreshing packages Failed to run python -m pip list --format=json
+2026-06-15 10:58:05.196 [info] Discovered env: /home/blizz/proj/blzbak/blzbak/.venv/bin/python
+2026-06-15 10:58:05.203 [info] Discovered env: /usr/bin/python3
+2026-06-15 10:58:05.209 [info] Resolved environment during PET refresh: /home/blizz/proj/blzbak/blzbak/.venv/bin/python
+2026-06-15 10:58:05.211 [info] Found venv environment: .venv (3.12.3.final.0)
+2026-06-15 10:58:26.032 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:26.061 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:26.067 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:26.076 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:26.082 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:43.543 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:43.549 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:43.554 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:43.559 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:43.564 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:58:47.848 [info] Running: /home/blizz/proj/blzbak/blzbak/.venv/bin/python -m pip list --format=json
+2026-06-15 10:58:47.936 [info] python: [{"name": "packaging", "version": "26.2"}, {"name": "pip", "version": "26.1.2"}, {"name": "setuptools", "version": "82.0.1"}, {"name": "wheel", "version": "0.47.0"}]
+
+2026-06-15 10:59:11.651 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:11.656 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:11.663 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:11.668 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:11.675 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:20.081 [info] Running: /home/blizz/proj/blzbak/blzbak/.venv/bin/python -m pip list --format=json
+2026-06-15 10:59:20.173 [info] python: [{"name": "blzbak", "version": "0.1.0", "editable_project_location": "/home/blizz/proj/blzbak/blzbak"}, {"name": "coverage", "version": "7.14.1"}, {"name": "iniconfig", "version": "2.3.0"}, {"name": "packaging", "version": "26.2"}, {"name": "pathspec", "version": "1.1.1"}, {"name": "pip", "version": "26.1.2"}, {"name": "pluggy", "version": "1.6.0"}, {"name": "Pygments", "version": "2.20.0"}, {"name": "pytest", "version": "9.1.0"}, {"name": "pytest-cov", "version": "7.1.0"}, {"name": "PyYAML", "version": "6.0.3"}, {"name": "setuptools", "version": "82.0.1"}, {"name": "wheel", "version": "0.47.0"}]
+
+2026-06-15 10:59:33.452 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:33.458 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:33.463 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:33.467 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 10:59:33.472 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 11:00:07.697 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 11:00:07.703 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 11:00:07.708 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 11:00:07.713 [info] Resolved Python Environment /usr/bin/python3
+2026-06-15 11:00:07.719 [info] Resolved Python Environment /usr/bin/python3
+
+
+>>>>>>>>>>>>>>>> Entire CHAT
+
+User: Hello, our project, named blzbak, is going to be an Automated backup system.  The github repo has already been created and the project is open on VS Code running on Ubuntu 24.04 where you, Claude Sonnet 4.6 is being accessed. The project consists of three main parts.  
+
+1) A command line utility that can be used to create backup sets, run the sets manually, and install cron jobs for automated running of backups.  The command line utility can be used to restore backups, by filename, foldername or entire backup set.  The backup will be configured to create daily snapshots. 
+
+2) A linux daemon which listens on a TCP/IP port for files being backed up or restore requests.
+
+3) A QT GUI front end which can use the command line utility to list existing backup sets.  Create and.or edit them.  To list the backup cron jobs and create or edit those also.
+
+First we will work on (1) the command line utility.  Ask me any design questions if you have them.  Lets get started.
+
+GitHub Copilot: Welcome! Before diving in, I have some focused design questions:
+
+**Language & Tech**
+1. What language for the CLI? (Python, Go, Rust, C/C++, Bash, or other?)
+
+**Backup Mechanics**
+2. Where are backups stored — local filesystem, remote SSH/SFTP, or both?
+3. What backup strategy for daily snapshots — `rsync` with hard-link snapshots (like `rsnapshot`), `tar` archives, or something else?
+4. Should backups be compressed? Encrypted?
+
+**Configuration**
+5. Where should backup set configs be stored — e.g., `/etc/blzbak/` (system-wide) or `~/.config/blzbak/` (per-user), or both?
+6. Config file format preference — YAML, TOML, JSON, INI?
+
+**Retention & Behavior**
+7. How many daily snapshots should be retained per backup set (configurable, or a fixed default)?
+8. Should exclusion patterns (like .gitignore-style) be supported per backup set?
+
+**Restore**
+9. When restoring by filename/foldername, should it restore to the original path, a user-specified path, or prompt?
+10. Should the restore be able to browse/list available snapshots interactively, or is it strictly by date/snapshot name?
+
+**Daemon Interaction (for part 1 scope)**
+11. Should the CLI in part 1 communicate with the daemon (part 2) when it's running, or operate independently on the filesystem directly?
+
+User: 1) Python
+2) A linux server on the LAN
+2,3) Two full rsynced backups will be retained on the server ((C)current and (O)once removed).  The remote utility will first inform the server a new backup is about to be made.  The server will create a set of diff files between the C and O backups.  Then since the previous full copy can be recreated from the diff files that have been made, the C and O backups on the server will be rsynced to be identical.  After that is completed the remote utility will rsync to the (C) backup on the server.
+4) We will address backup compression if a future iteration, not yet.
+5) A .config file located in the same place as the linux daemon executable file contains the base location for the backups, it will default to /blzbak at installation time or if no .config is found.
+6) YAML
+7) Snapshots will be configurable, daily is default, but could be whatever is possible in  CRON.  There will be a .config file for the remote command line utility also stored in same place as executable.
+8) Yes lets use same patterns as gitignore and put the file .blzbak-ignore in the same location as the executable.  Note that config and ignore setting will be stored in each backup set so that future changes to the .config and .blzbak-ignore files will not affect existing backup sets.  
+9) Restorations will default to the original location unless specified otherwise.  Prompt if not specified, a simple enter key for original or the alternate base location will be entered at the prompt unless specified by command line option.
+10) The GUI will allow for the browsing of available snapshots.  All the backup functions, listing of backup sets, backup instances, and folders files can be done through the command line utility as well.  The GUI will perform all its functions by calling this utility with command line arguments and an optional window in the GUI that can be opened to peek in on what is happening behind the scenes with the calls to the command line utility.
+11) The CLI must communicate with the with the daemon, one to get lists of existing backups when needed, and also as described before when it needs to prepare for a new backup about to be performed.  The daemon will have one thread for listening for the client (remote) messages and another thread to perform the DIFF required before a new fsync is run from the client.  The first thing CLI does when being run is establish a communication channel with the daemon on the server.
+
+GitHub Copilot: Excellent, that's a thorough and well-considered design. Let me plan out the full project structure before we build it. 
+
+Created 7 todos
+
+Starting: *Create project foundation files* (1/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/pyproject.toml)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/__init__.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/__main__.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/protocol.py)
+
+Starting: *Create data models and config modules* (2/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/models.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/config.py)
+
+Starting: *Create core logic modules* (3/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/client.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/ignore.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/rsync.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/cron.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/backup.py)
+
+Starting: *Create command handler modules* (4/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/commands/__init__.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/commands/set_cmd.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/commands/backup_cmd.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/commands/restore_cmd.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/commands/cron_cmd.py)
+
+Starting: *Create main CLI entry point* (5/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/blzbak/cli.py)
+
+Starting: *Create test suite* (6/7)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/tests/__init__.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/tests/test_models.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/tests/test_cron.py)
+
+Created [](file:///home/blizz/proj/blzbak/blzbak/tests/test_config.py)
+
+Starting: *Install dependencies and verify* (7/7)
+
+Ran terminal command:  pip install -e ".[dev]" -q 2>&1 | tail -5
+
+Ran terminal command:  python3 -m pip install -e ".[dev]" -q 2>&1 | tail -8
+
+Ran terminal command:  which python3 && python3 --version && python3 -c "import sys; print(sys.path)"
+
+Ran terminal command:  python3 -m venv .venv && .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+
+Ran terminal command:  .venv/bin/python -c "import setuptools; print(setuptools.__version__)"
+
+Ran terminal command:  .venv/bin/pip install --upgrade pip setuptools wheel -q && .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+
+Replacing 3 lines with 3 lines in [](file:///home/blizz/proj/blzbak/blzbak/pyproject.toml)
+
+
+```
+
+```
+
+
+Ran terminal command:  .venv/bin/pip install -e ".[dev]" -q 2>&1 | tail -8
+
+Ran terminal command:  .venv/bin/pytest tests/ -v 2>&1
+
+25/25 tests pass. Let me also verify the CLI loads correctly: 
+
+Ran terminal command:  .venv/bin/blzbak --help && echo "---" && .venv/bin/blzbak set --help && echo "---" && .venv/bin/blzbak restore --help
+
+Completed: *Install dependencies and verify* (7/7)
+
+All 25 tests pass. Here's a summary of what was built:
+
+---
+
+**Project structure** (`blzbak/blzbak/`):
+
+| File | Purpose |
+|---|---|
+| pyproject.toml | Build config; `pyyaml` + `pathspec` deps; blzbak console script |
+| protocol.py | Length-prefixed JSON framing for daemon TCP comms |
+| models.py | `BackupSet`, `ServerConfig`, `Snapshot`; name validation prevents path traversal |
+| config.py | Loads `.config` / `.blzbak-ignore` from the executable's directory; safe YAML deep-merge |
+| client.py | `DaemonClient` — context-manager TCP client; extended 300 s timeout for `PREPARE_BACKUP` |
+| ignore.py | gitignore-style patterns via `pathspec`; converts to rsync `--exclude=` args |
+| rsync.py | `build_backup_cmd` / `build_restore_cmd` / `run_rsync`; `--relative` + `/./<path>` trick for restores |
+| cron.py | `# blzbak-managed:<name>` tagged cron entries; idempotent install |
+| backup.py | YAML backup-set persistence in `sets_directory` |
+| commands | `set_cmd`, `backup_cmd`, `restore_cmd`, `cron_cmd` |
+| cli.py | argparse entry point; daemon connected only for `backup`/`restore` commands |
+
+**Key design decisions implemented:**
+- Backup set configs are **self-contained** — ignore patterns and server info are snapshotted at creation time
+- `PREPARE_BACKUP` → daemon diffs C/O and syncs → CLI rsyncs to C → `BACKUP_COMPLETE`
+- Restores use rsync `--relative` with the `/./<path>` trick so original paths are always preserved
+- All subprocess calls use list args (`shell=False`) — no injection risk
+
+Made changes.
+
+
+
+
+================================================================================
+DAEMON BUILD - 2026-06-17
+Claude Sonnet 4.5 (via GitHub Copilot)
+================================================================================
+
+User requested creation of blzbakd daemon program for the backup server.
+
+The daemon was successfully built with the following components:
+
+**New files created:**
+
+blzbak/daemon/
+├── __init__.py          - Package initialization
+├── config.py            - Daemon configuration management
+├── storage.py           - Backup storage and filesystem operations
+├── handler.py           - Protocol command handler
+├── server.py            - Multi-threaded TCP server
+├── cli.py               - Command-line interface for blzbakd
+└── README.md            - Comprehensive daemon documentation
+
+tests/test_daemon.py     - 22 tests for daemon components
+daemon.config.example    - Example configuration file
+
+**Updated files:**
+- pyproject.toml: Added blzbakd entry point
+
+**Daemon features:**
+- Multi-threaded TCP server listening on port 7890 (configurable)
+- Handles all protocol commands: PING, PREPARE_BACKUP, BACKUP_COMPLETE, 
+  LIST_SETS, LIST_SNAPSHOTS, LIST_FILES
+- Storage management with C (current) and O (once-removed) snapshots
+- Differential backup support - creates diff archives before rotation
+- Configurable via YAML config file
+- Signal handling for graceful shutdown (SIGINT, SIGTERM)
+- Comprehensive logging with configurable levels
+
+**Storage structure:**
+/blzbak/                      (configurable base_path)
+├── <set_name>/
+│   ├── C/                    (current backup)
+│   ├── O/                    (once-removed backup)
+│   └── metadata.yaml
+└── diffs/
+    └── <set_name>/
+        └── diff_<timestamp>.tar.gz
+
+**Backup workflow:**
+1. Client sends PREPARE_BACKUP command
+2. Daemon creates diff between C and O snapshots
+3. Daemon syncs O to match C (rsync --delete)
+4. Client rsyncs new backup to C directory
+5. Client sends BACKUP_COMPLETE notification
+
+**Test results:**
+- All 47 tests pass (25 original client tests + 22 new daemon tests)
+- Tests cover config loading, storage management, and protocol handling
+
+**Command usage:**
+blzbakd                                    # Start with defaults
+blzbakd --config /path/to/config.yaml     # Custom config
+blzbakd --port 8000 --log-level DEBUG     # Override settings
+
+**Configuration:**
+- base_path: /blzbak (default)
+- port: 7890 (default)
+- host: 0.0.0.0 (listen on all interfaces)
+- max_workers: 4 (thread pool size)
+- log_level: INFO
+- diff_dir: {base_path}/diffs
+
+The daemon is fully functional and ready for integration with the existing
+blzbak CLI client. The protocol is implemented according to the design in
+protocol.py using length-prefixed JSON messages over TCP.
+
+Next steps (future work):
+- systemd service file for production deployment
+- GUI integration (Part 3 of the project)
+- Authentication/encryption for secure remote backups
+- Monitoring and alerting capabilities
+
+
+
+
+Quick Start
+
+# The daemon is already installed in your venv
+.venv/bin/blzbakd --help
+
+# Start with defaults (listens on 0.0.0.0:7890, stores in /blzbak)
+.venv/bin/blzbakd
+
+# Or with custom settings
+.venv/bin/blzbakd --port 8000 --base-path /mnt/backups --log-level DEBUG
+
+
+Storage Structure 
+/blzbak/                    (configurable)
+├── <backup_set>/
+│   ├── C/                  (current backup)
+│   ├── O/                  (once-removed)
+│   └── metadata.yaml
+└── diffs/
+    └── <backup_set>/
+        └── diff_*.tar.gz
+
+        
 
