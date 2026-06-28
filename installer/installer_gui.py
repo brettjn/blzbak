@@ -583,7 +583,7 @@ class InstallerWizard(QWizard):
         super().__init__()
         self.setWindowTitle("blzbak Daemon Installer")
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
-        self.setFixedSize(700, 500)
+        self.setFixedSize(700, 560)
         
         # Add pages
         self.addPage(IntroPage())
