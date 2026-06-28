@@ -172,8 +172,8 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(base_row)
         
-        # Add spacing before description
-        storage_layout.addSpacing(10)
+        # Add spacing before description to prevent touching text box
+        storage_layout.addSpacing(12)
         
         # Description with proper spacing
         base_desc = QLabel("Root directory for storing backups")
@@ -204,8 +204,8 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(diff_row)
         
-        # Add spacing before description
-        storage_layout.addSpacing(10)
+        # Add spacing before description to prevent touching text box
+        storage_layout.addSpacing(12)
         
         # Description with proper spacing
         diff_desc = QLabel("Directory for storing differential archives")
