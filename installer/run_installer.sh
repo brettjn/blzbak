@@ -49,7 +49,15 @@ fi
 # Run the installer
 echo "Starting graphical installer..."
 echo ""
+
+# Method 1: Use the Python launcher (recommended)
+if [ -f "$SCRIPT_DIR/run_installer.py" ]; then
+    python3 "$SCRIPT_DIR/run_installer.py"
+    exit $?
+fi
+
+# Method 2: Run directly with proper path setup
 cd "$SCRIPT_DIR"
-python3 installer_gui.py
+PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH" python3 installer_gui.py
 
 exit $?

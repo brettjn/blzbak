@@ -16,14 +16,26 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap
 
-from .system_ops import (
-    create_blzbak_user, install_systemd_service, start_daemon,
-    check_root_privileges, stop_daemon, daemon_is_running
-)
-from .file_ops import (
-    find_blzbak_zip, extract_blzbak_zip, install_daemon_files,
-    create_daemon_config, cleanup_temp_files
-)
+# Handle both relative and absolute imports
+try:
+    from .system_ops import (
+        create_blzbak_user, install_systemd_service, start_daemon,
+        check_root_privileges, stop_daemon, daemon_is_running
+    )
+    from .file_ops import (
+        find_blzbak_zip, extract_blzbak_zip, install_daemon_files,
+        create_daemon_config, cleanup_temp_files
+    )
+except ImportError:
+    # If relative imports fail, try absolute imports
+    from system_ops import (
+        create_blzbak_user, install_systemd_service, start_daemon,
+        check_root_privileges, stop_daemon, daemon_is_running
+    )
+    from file_ops import (
+        find_blzbak_zip, extract_blzbak_zip, install_daemon_files,
+        create_daemon_config, cleanup_temp_files
+    )
 
 
 class IntroPage(QWizardPage):

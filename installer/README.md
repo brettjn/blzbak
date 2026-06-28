@@ -47,11 +47,33 @@ This will create `blzbak.zip` containing the daemon files needed for installatio
 
 ## Running the Installer
 
-The installer requires root privileges to create system users and install services:
+The installer requires root privileges to create system users and install services.
 
+There are several ways to run the installer:
+
+**Method 1: Using the shell script (recommended)**
 ```bash
+cd installer
+sudo ./run_installer.sh
+```
+
+**Method 2: Using the Python launcher**
+```bash
+cd installer
+sudo python3 run_installer.py
+```
+
+**Method 3: Running directly**
+```bash
+cd installer
 sudo python3 installer_gui.py
 ```
+
+All methods will:
+- Check for root privileges
+- Verify PyQt6 and PyYAML are installed
+- Ensure blzbak.zip exists
+- Launch the graphical installer wizard
 
 Or if you prefer to use a virtual environment:
 
