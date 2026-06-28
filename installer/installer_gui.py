@@ -172,12 +172,9 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(base_row)
         
-        # Add spacing before description to prevent touching text box
-        storage_layout.addSpacing(12)
-        
         # Description with proper spacing
         base_desc = QLabel("Root directory for storing backups")
-        base_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
+        base_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px; margin-top: 8px;")
         base_desc.setMinimumHeight(20)
         storage_layout.addWidget(base_desc)
         
@@ -204,12 +201,9 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(diff_row)
         
-        # Add spacing before description to prevent touching text box
-        storage_layout.addSpacing(12)
-        
         # Description with proper spacing
         diff_desc = QLabel("Directory for storing differential archives")
-        diff_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
+        diff_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px; margin-top: 8px;")
         diff_desc.setMinimumHeight(20)
         storage_layout.addWidget(diff_desc)
         
