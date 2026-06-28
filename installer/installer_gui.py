@@ -122,6 +122,7 @@ class PathConfigPage(QWizardPage):
         # Installation path group
         install_group = QGroupBox("Daemon Installation")
         install_layout = QFormLayout()
+        install_layout.setVerticalSpacing(15)  # Increase spacing between rows
         
         self.install_path_edit = QLineEdit("/opt/blzbak")
         self.install_path_edit.setMinimumWidth(400)
@@ -143,6 +144,7 @@ class PathConfigPage(QWizardPage):
         # Backup storage group
         storage_group = QGroupBox("Backup Storage")
         storage_layout = QFormLayout()
+        storage_layout.setVerticalSpacing(15)  # Increase spacing between rows
         
         # Base path for backups
         self.base_path_edit = QLineEdit("/blzbak")
@@ -182,6 +184,7 @@ class PathConfigPage(QWizardPage):
         # Network configuration
         network_group = QGroupBox("Network Configuration")
         network_layout = QFormLayout()
+        network_layout.setVerticalSpacing(15)  # Increase spacing between rows
         
         self.port_edit = QLineEdit("7890")
         network_layout.addRow("TCP Port:", self.port_edit)
@@ -208,6 +211,12 @@ class PathConfigPage(QWizardPage):
         
         # Update diff path when base path changes
         self.base_path_edit.textChanged.connect(self.update_diff_path)
+    
+    def initializePage(self):
+        """Trigger completion check when page is shown."""
+        # Emit completeChanged to update wizard button states
+        # This ensures the Next button is enabled when fields have default values
+        self.completeChanged.emit()
     
     def browse_install_path(self):
         """Open directory browser for installation path."""
