@@ -173,7 +173,7 @@ class PathConfigPage(QWizardPage):
         storage_layout.addLayout(base_row)
         
         # Add spacing before description
-        storage_layout.addSpacing(5)
+        storage_layout.addSpacing(10)
         
         # Description with proper spacing
         base_desc = QLabel("Root directory for storing backups")
@@ -182,7 +182,7 @@ class PathConfigPage(QWizardPage):
         storage_layout.addWidget(base_desc)
         
         # Add spacing between fields
-        storage_layout.addSpacing(10)
+        storage_layout.addSpacing(15)
         
         # Diffs path row - use HBox instead of FormLayout for better control
         diff_row = QHBoxLayout()
@@ -205,13 +205,16 @@ class PathConfigPage(QWizardPage):
         storage_layout.addLayout(diff_row)
         
         # Add spacing before description
-        storage_layout.addSpacing(5)
+        storage_layout.addSpacing(10)
         
         # Description with proper spacing
         diff_desc = QLabel("Directory for storing differential archives")
         diff_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
         diff_desc.setMinimumHeight(20)
         storage_layout.addWidget(diff_desc)
+        
+        # Add bottom padding to group
+        storage_layout.addSpacing(10)
         
         storage_group.setLayout(storage_layout)
         layout.addWidget(storage_group)
