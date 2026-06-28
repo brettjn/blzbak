@@ -94,29 +94,32 @@ def install_daemon_files(temp_dir: Path, install_path: str) -> bool:
             print(f"Daemon directory not found in {blzbak_dir}")
             return False
         
-        # Copy daemon files
-        daemon_files = list(daemon_dir.glob('*.py'))
-        for file in daemon_files:
-            if file.name != '__pycache__':
-                shutil.copy2(file, install_dir / file.name)
+        # Copy the entire daemon directory to maintain package structure
+        daemon_dst = install_dir / 'daemon'
+        shutil.copytree(daemon_dir, daemon_dst, dirs_exist_ok=True)
+        
+        # Copy blzbak/__init__.py if it exists (for package structure)
+        init_file = blzbak_dir / '__init__.py'
+        if init_file.exists():
+            shutil.copy2(init_file, install_dir / '__init__.py')
         
         # Copy protocol.py (needed by daemon)
         protocol_file = blzbak_dir / 'protocol.py'
         if protocol_file.exists():
             shutil.copy2(protocol_file, install_dir / 'protocol.py')
         
-        # Create a simple launcher script
+        # Create a launcher script that imports daemon as a module
         launcher_content = f"""#!/usr/bin/env python3
 \"\"\"Launch script for blzbakd daemon.\"\"\"
 
 import sys
 import os
 
-# Add installation directory to path
+# Add installation directory to path so daemon package can be imported
 sys.path.insert(0, '{install_path}')
 
-# Import and run CLI
-from cli import main
+# Import and run daemon CLI
+from daemon.cli import main
 
 if __name__ == '__main__':
     main()
