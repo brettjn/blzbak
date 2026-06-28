@@ -11,7 +11,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QWizard, QWizardPage, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QFileDialog, QCheckBox,
-    QTextEdit, QProgressBar, QMessageBox, QGroupBox, QFormLayout
+    QTextEdit, QProgressBar, QMessageBox, QGroupBox, QFormLayout,
+    QSpacerItem, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap
@@ -172,10 +173,12 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(base_row)
         
+        # Add explicit spacer to create gap
+        storage_layout.addItem(QSpacerItem(0, 8, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
+        
         # Description with proper spacing
         base_desc = QLabel("Root directory for storing backups")
         base_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
-        base_desc.setContentsMargins(0, 8, 0, 0)  # 8px top margin
         base_desc.setMinimumHeight(20)
         storage_layout.addWidget(base_desc)
         
@@ -202,10 +205,12 @@ class PathConfigPage(QWizardPage):
         
         storage_layout.addLayout(diff_row)
         
+        # Add explicit spacer to create gap
+        storage_layout.addItem(QSpacerItem(0, 8, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
+        
         # Description with proper spacing
         diff_desc = QLabel("Directory for storing differential archives")
         diff_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
-        diff_desc.setContentsMargins(0, 8, 0, 0)  # 8px top margin
         diff_desc.setMinimumHeight(20)
         storage_layout.addWidget(diff_desc)
         
