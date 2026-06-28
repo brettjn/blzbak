@@ -248,20 +248,33 @@ class PathConfigPage(QWizardPage):
         self.setLayout(layout)
         
         # Register fields for the wizard
-        self.registerField("install_path*", self.install_path_edit)
-        self.registerField("base_path*", self.base_path_edit)
-        self.registerField("diff_path*", self.diff_path_edit)
+        self.registerField("install_path", self.install_path_edit)
+        self.registerField("base_path", self.base_path_edit)
+        self.registerField("diff_path", self.diff_path_edit)
         self.registerField("port", self.port_edit)
         self.registerField("host", self.host_edit)
         
         # Update diff path when base path changes
         self.base_path_edit.textChanged.connect(self.update_diff_path)
+        
+        # Update Next button when fields change
+        self.install_path_edit.textChanged.connect(self.completeChanged)
+        self.base_path_edit.textChanged.connect(self.completeChanged)
+        self.diff_path_edit.textChanged.connect(self.completeChanged)
+        self.port_edit.textChanged.connect(self.completeChanged)
     
     def initializePage(self):
         """Trigger completion check when page is shown."""
-        # Emit completeChanged to update wizard button states
-        # This ensures the Next button is enabled when fields have default values
         self.completeChanged.emit()
+    
+    def isComplete(self):
+        """Enable Next when all required fields have values."""
+        return bool(
+            self.install_path_edit.text().strip() and
+            self.base_path_edit.text().strip() and
+            self.diff_path_edit.text().strip() and
+            self.port_edit.text().strip()
+        )
     
     def browse_install_path(self):
         """Open directory browser for installation path."""
