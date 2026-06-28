@@ -154,10 +154,12 @@ class PathConfigPage(QWizardPage):
         
         # Base path row
         base_form = QFormLayout()
+        base_form.setVerticalSpacing(10)  # Add spacing between form rows
         self.base_path_edit = QLineEdit("/blzbak")
         self.base_path_edit.setMinimumWidth(400)
         self.base_path_edit.setMinimumHeight(28)
         base_path_btn = QPushButton("Browse...")
+        base_path_btn.setMinimumHeight(28)
         base_path_btn.clicked.connect(self.browse_base_path)
         
         base_path_layout = QHBoxLayout()
@@ -167,17 +169,22 @@ class PathConfigPage(QWizardPage):
         base_form.addRow("Backup Directory:", base_path_layout)
         storage_layout.addLayout(base_form)
         
-        # Description
+        # Description with top margin
         base_desc = QLabel("Root directory for storing backups")
-        base_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-bottom: 15px;")
+        base_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-top: 5px;")
         storage_layout.addWidget(base_desc)
+        
+        # Add spacing between fields
+        storage_layout.addSpacing(15)
         
         # Diffs path row
         diff_form = QFormLayout()
+        diff_form.setVerticalSpacing(10)  # Add spacing between form rows
         self.diff_path_edit = QLineEdit("/blzbak/diffs")
         self.diff_path_edit.setMinimumWidth(400)
         self.diff_path_edit.setMinimumHeight(28)
         diff_path_btn = QPushButton("Browse...")
+        diff_path_btn.setMinimumHeight(28)
         diff_path_btn.clicked.connect(self.browse_diff_path)
         
         diff_path_layout = QHBoxLayout()
@@ -187,9 +194,9 @@ class PathConfigPage(QWizardPage):
         diff_form.addRow("Diffs Directory:", diff_path_layout)
         storage_layout.addLayout(diff_form)
         
-        # Description
+        # Description with top margin
         diff_desc = QLabel("Directory for storing differential archives")
-        diff_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px;")
+        diff_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-top: 5px;")
         storage_layout.addWidget(diff_desc)
         
         storage_group.setLayout(storage_layout)
