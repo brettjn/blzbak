@@ -121,9 +121,11 @@ class PathConfigPage(QWizardPage):
         
         # Installation path group
         install_group = QGroupBox("Daemon Installation")
-        install_layout = QFormLayout()
-        install_layout.setVerticalSpacing(15)  # Increase spacing between rows
+        install_layout = QVBoxLayout()
+        install_layout.setSpacing(10)
         
+        # Install location row
+        install_form = QFormLayout()
         self.install_path_edit = QLineEdit("/opt/blzbak")
         self.install_path_edit.setMinimumWidth(400)
         install_path_btn = QPushButton("Browse...")
@@ -133,20 +135,24 @@ class PathConfigPage(QWizardPage):
         install_path_layout.addWidget(self.install_path_edit)
         install_path_layout.addWidget(install_path_btn)
         
-        install_layout.addRow("Install Location:", install_path_layout)
-        install_layout.addRow(
-            "",
-            QLabel("Directory where the daemon will be installed")
-        )
+        install_form.addRow("Install Location:", install_path_layout)
+        install_layout.addLayout(install_form)
+        
+        # Description label with indent
+        desc_label = QLabel("Directory where the daemon will be installed")
+        desc_label.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px;")
+        install_layout.addWidget(desc_label)
+        
         install_group.setLayout(install_layout)
         layout.addWidget(install_group)
         
         # Backup storage group
         storage_group = QGroupBox("Backup Storage")
-        storage_layout = QFormLayout()
-        storage_layout.setVerticalSpacing(15)  # Increase spacing between rows
+        storage_layout = QVBoxLayout()
+        storage_layout.setSpacing(10)
         
-        # Base path for backups
+        # Base path row
+        base_form = QFormLayout()
         self.base_path_edit = QLineEdit("/blzbak")
         self.base_path_edit.setMinimumWidth(400)
         base_path_btn = QPushButton("Browse...")
@@ -156,13 +162,16 @@ class PathConfigPage(QWizardPage):
         base_path_layout.addWidget(self.base_path_edit)
         base_path_layout.addWidget(base_path_btn)
         
-        storage_layout.addRow("Backup Directory:", base_path_layout)
-        storage_layout.addRow(
-            "",
-            QLabel("Root directory for storing backups")
-        )
+        base_form.addRow("Backup Directory:", base_path_layout)
+        storage_layout.addLayout(base_form)
         
-        # Diffs path
+        # Description
+        base_desc = QLabel("Root directory for storing backups")
+        base_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-bottom: 15px;")
+        storage_layout.addWidget(base_desc)
+        
+        # Diffs path row
+        diff_form = QFormLayout()
         self.diff_path_edit = QLineEdit("/blzbak/diffs")
         self.diff_path_edit.setMinimumWidth(400)
         diff_path_btn = QPushButton("Browse...")
@@ -172,29 +181,35 @@ class PathConfigPage(QWizardPage):
         diff_path_layout.addWidget(self.diff_path_edit)
         diff_path_layout.addWidget(diff_path_btn)
         
-        storage_layout.addRow("Diffs Directory:", diff_path_layout)
-        storage_layout.addRow(
-            "",
-            QLabel("Directory for storing differential archives")
-        )
+        diff_form.addRow("Diffs Directory:", diff_path_layout)
+        storage_layout.addLayout(diff_form)
+        
+        # Description
+        diff_desc = QLabel("Directory for storing differential archives")
+        diff_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px;")
+        storage_layout.addWidget(diff_desc)
         
         storage_group.setLayout(storage_layout)
         layout.addWidget(storage_group)
         
         # Network configuration
         network_group = QGroupBox("Network Configuration")
-        network_layout = QFormLayout()
-        network_layout.setVerticalSpacing(15)  # Increase spacing between rows
+        network_layout = QVBoxLayout()
+        network_layout.setSpacing(10)
         
+        # Port and bind address
+        network_form = QFormLayout()
         self.port_edit = QLineEdit("7890")
-        network_layout.addRow("TCP Port:", self.port_edit)
+        network_form.addRow("TCP Port:", self.port_edit)
         
         self.host_edit = QLineEdit("0.0.0.0")
-        network_layout.addRow("Bind Address:", self.host_edit)
-        network_layout.addRow(
-            "",
-            QLabel("0.0.0.0 = all interfaces, 127.0.0.1 = localhost only")
-        )
+        network_form.addRow("Bind Address:", self.host_edit)
+        network_layout.addLayout(network_form)
+        
+        # Description
+        network_desc = QLabel("0.0.0.0 = all interfaces, 127.0.0.1 = localhost only")
+        network_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px;")
+        network_layout.addWidget(network_desc)
         
         network_group.setLayout(network_layout)
         layout.addWidget(network_group)
