@@ -128,6 +128,7 @@ class PathConfigPage(QWizardPage):
         install_form = QFormLayout()
         self.install_path_edit = QLineEdit("/opt/blzbak")
         self.install_path_edit.setMinimumWidth(400)
+        self.install_path_edit.setMinimumHeight(28)
         install_path_btn = QPushButton("Browse...")
         install_path_btn.clicked.connect(self.browse_install_path)
         
@@ -155,6 +156,7 @@ class PathConfigPage(QWizardPage):
         base_form = QFormLayout()
         self.base_path_edit = QLineEdit("/blzbak")
         self.base_path_edit.setMinimumWidth(400)
+        self.base_path_edit.setMinimumHeight(28)
         base_path_btn = QPushButton("Browse...")
         base_path_btn.clicked.connect(self.browse_base_path)
         
@@ -174,6 +176,7 @@ class PathConfigPage(QWizardPage):
         diff_form = QFormLayout()
         self.diff_path_edit = QLineEdit("/blzbak/diffs")
         self.diff_path_edit.setMinimumWidth(400)
+        self.diff_path_edit.setMinimumHeight(28)
         diff_path_btn = QPushButton("Browse...")
         diff_path_btn.clicked.connect(self.browse_diff_path)
         
@@ -200,9 +203,11 @@ class PathConfigPage(QWizardPage):
         # Port and bind address
         network_form = QFormLayout()
         self.port_edit = QLineEdit("7890")
+        self.port_edit.setMinimumHeight(28)
         network_form.addRow("TCP Port:", self.port_edit)
         
         self.host_edit = QLineEdit("0.0.0.0")
+        self.host_edit.setMinimumHeight(28)
         network_form.addRow("Bind Address:", self.host_edit)
         network_layout.addLayout(network_form)
         
