@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=blzbak Daemon Installer
+Comment=Install and configure the blzbak backup daemon
+Exec=pkexec python3 /path/to/installer/installer_gui.py
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;
+Keywords=backup;daemon;install;

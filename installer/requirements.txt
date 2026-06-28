@@ -1,0 +1,7 @@
+# Python dependencies for the blzbak installer
+
+# Qt6 for the graphical interface
+PyQt6>=6.4.0
+
+# YAML support for configuration files
+PyYAML>=6.0
