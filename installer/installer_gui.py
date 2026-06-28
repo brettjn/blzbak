@@ -152,51 +152,59 @@ class PathConfigPage(QWizardPage):
         storage_layout = QVBoxLayout()
         storage_layout.setSpacing(10)
         
-        # Base path row
-        base_form = QFormLayout()
-        base_form.setVerticalSpacing(10)  # Add spacing between form rows
+        # Base path row - use HBox instead of FormLayout for better control
+        base_row = QHBoxLayout()
+        base_label = QLabel("Backup Directory:")
+        base_label.setMinimumWidth(120)
+        base_label.setMinimumHeight(28)
+        base_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        base_row.addWidget(base_label)
+        
         self.base_path_edit = QLineEdit("/blzbak")
         self.base_path_edit.setMinimumWidth(400)
         self.base_path_edit.setMinimumHeight(28)
+        base_row.addWidget(self.base_path_edit)
+        
         base_path_btn = QPushButton("Browse...")
         base_path_btn.setMinimumHeight(28)
         base_path_btn.clicked.connect(self.browse_base_path)
+        base_row.addWidget(base_path_btn)
         
-        base_path_layout = QHBoxLayout()
-        base_path_layout.addWidget(self.base_path_edit)
-        base_path_layout.addWidget(base_path_btn)
+        storage_layout.addLayout(base_row)
         
-        base_form.addRow("Backup Directory:", base_path_layout)
-        storage_layout.addLayout(base_form)
-        
-        # Description with top margin
+        # Description with proper spacing
         base_desc = QLabel("Root directory for storing backups")
-        base_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-top: 5px;")
+        base_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
+        base_desc.setMinimumHeight(20)
         storage_layout.addWidget(base_desc)
         
         # Add spacing between fields
-        storage_layout.addSpacing(15)
+        storage_layout.addSpacing(10)
         
-        # Diffs path row
-        diff_form = QFormLayout()
-        diff_form.setVerticalSpacing(10)  # Add spacing between form rows
+        # Diffs path row - use HBox instead of FormLayout for better control
+        diff_row = QHBoxLayout()
+        diff_label = QLabel("Diffs Directory:")
+        diff_label.setMinimumWidth(120)
+        diff_label.setMinimumHeight(28)
+        diff_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        diff_row.addWidget(diff_label)
+        
         self.diff_path_edit = QLineEdit("/blzbak/diffs")
         self.diff_path_edit.setMinimumWidth(400)
         self.diff_path_edit.setMinimumHeight(28)
+        diff_row.addWidget(self.diff_path_edit)
+        
         diff_path_btn = QPushButton("Browse...")
         diff_path_btn.setMinimumHeight(28)
         diff_path_btn.clicked.connect(self.browse_diff_path)
+        diff_row.addWidget(diff_path_btn)
         
-        diff_path_layout = QHBoxLayout()
-        diff_path_layout.addWidget(self.diff_path_edit)
-        diff_path_layout.addWidget(diff_path_btn)
+        storage_layout.addLayout(diff_row)
         
-        diff_form.addRow("Diffs Directory:", diff_path_layout)
-        storage_layout.addLayout(diff_form)
-        
-        # Description with top margin
+        # Description with proper spacing
         diff_desc = QLabel("Directory for storing differential archives")
-        diff_desc.setStyleSheet("color: gray; font-size: 9pt; margin-left: 20px; margin-top: 5px;")
+        diff_desc.setStyleSheet("color: gray; font-size: 9pt; padding-left: 130px;")
+        diff_desc.setMinimumHeight(20)
         storage_layout.addWidget(diff_desc)
         
         storage_group.setLayout(storage_layout)
