@@ -116,7 +116,7 @@ class DaemonServer:
 
     def __init__(self, config: DaemonConfig):
         self.config = config
-        self.storage = StorageManager(config.base_path, config.diff_dir)
+        self.storage = StorageManager(config.base_path, config.diff_dir, config)
         self.handler = ProtocolHandler(self.storage)
         self.server_socket: Optional[socket.socket] = None
         self.running = False

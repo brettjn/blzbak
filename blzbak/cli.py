@@ -22,6 +22,8 @@ Command hierarchy:
               remove   <name>
               list
               edit     <name> <schedule>
+
+        test  — Test configuration and server connection
 """
 
 import argparse
@@ -30,7 +32,7 @@ from pathlib import Path
 
 from .config import load_config, setup_logging
 from .client import DaemonClient, DaemonError
-from .commands import set_cmd, backup_cmd, restore_cmd, cron_cmd
+from .commands import set_cmd, backup_cmd, restore_cmd, cron_cmd, test_cmd
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +61,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_backup_commands(sub)
     _add_restore_commands(sub)
     _add_cron_commands(sub)
+    _add_test_command(sub)
 
     return parser
 
@@ -159,6 +162,10 @@ def _add_cron_commands(sub: argparse._SubParsersAction) -> None:
     ed.add_argument("schedule", metavar="CRON", help="New cron expression (e.g. '0 3 * * *')")
 
 
+def _add_test_command(sub: argparse._SubParsersAction) -> None:
+    sub.add_parser("test", help="Test configuration and server connection")
+
+
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
@@ -193,6 +200,9 @@ def _dispatch(args, config: dict, client) -> int:
         if cc == "list":    return cron_cmd.cmd_cron_list(args, config)
         if cc == "edit":    return cron_cmd.cmd_cron_edit(args, config)
 
+    elif cmd == "test":
+        return test_cmd.cmd_test(args, config, client)
+
     print(f"Internal error: unhandled command '{args.command}'", file=sys.stderr)
     return 1
 
@@ -217,8 +227,8 @@ def main() -> None:
     if getattr(args, "port", None):
         config.setdefault("server", {})["port"] = args.port
 
-    # Daemon connection is required for backup and restore commands
-    needs_daemon = args.command in ("backup", "restore")
+    # Daemon connection is required for backup, restore, and test commands
+    needs_daemon = args.command in ("backup", "restore", "test")
     client: DaemonClient | None = None
 
     if needs_daemon and not getattr(args, "no_daemon", False):

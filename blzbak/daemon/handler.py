@@ -32,6 +32,7 @@ class ProtocolHandler:
         # Command dispatch table
         self._handlers = {
             Command.PING: self._handle_ping,
+            Command.TEST: self._handle_test,
             Command.PREPARE_BACKUP: self._handle_prepare_backup,
             Command.BACKUP_COMPLETE: self._handle_backup_complete,
             Command.LIST_SETS: self._handle_list_sets,
@@ -73,6 +74,59 @@ class ProtocolHandler:
     def _handle_ping(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle PING command - simple health check."""
         return {"status": "ok", "message": "pong"}
+
+    def _handle_test(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle TEST command - return daemon configuration and status."""
+        from .config import DaemonConfig
+        import os
+        
+        # Get current daemon configuration
+        config = self.storage.config if hasattr(self.storage, 'config') else None
+        
+        # Build response with daemon info
+        response = {
+            "status": "ok",
+            "message": "Test successful",
+            "daemon": {
+                "base_path": str(self.storage.base_path),
+                "diff_dir": str(self.storage.diff_dir),
+            },
+            "sets": [],
+        }
+        
+        # Add configuration details if available
+        if config:
+            response["daemon"]["port"] = config.port
+            response["daemon"]["host"] = config.host
+            response["daemon"]["max_workers"] = config.max_workers
+            response["daemon"]["log_level"] = config.log_level
+        
+        # Check if base_path exists and is writable
+        base_path = self.storage.base_path
+        response["daemon"]["base_path_exists"] = os.path.exists(base_path)
+        response["daemon"]["base_path_writable"] = os.access(base_path, os.W_OK) if os.path.exists(base_path) else False
+        
+        # List all backup sets with basic info
+        try:
+            sets = self.storage.list_sets()
+            for set_name in sets:
+                set_info = {"name": set_name}
+                try:
+                    # Get snapshot info
+                    c_snap = self.storage.get_snapshot_info(set_name, "C")
+                    o_snap = self.storage.get_snapshot_info(set_name, "O")
+                    set_info["snapshots"] = {
+                        "C": c_snap.to_dict() if c_snap.exists else None,
+                        "O": o_snap.to_dict() if o_snap.exists else None,
+                    }
+                except Exception as e:
+                    set_info["error"] = str(e)
+                response["sets"].append(set_info)
+        except Exception as e:
+            logger.error(f"Failed to list sets during test: {e}")
+            response["sets_error"] = str(e)
+        
+        return response
 
     def _handle_prepare_backup(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle PREPARE_BACKUP command.

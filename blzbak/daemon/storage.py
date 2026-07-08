@@ -47,9 +47,10 @@ class SnapshotInfo:
 class StorageManager:
     """Manages backup storage on the server."""
 
-    def __init__(self, base_path: str, diff_dir: str):
+    def __init__(self, base_path: str, diff_dir: str, config=None):
         self.base_path = Path(base_path)
         self.diff_dir = Path(diff_dir)
+        self.config = config  # Store config for test command
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.diff_dir.mkdir(parents=True, exist_ok=True)
 

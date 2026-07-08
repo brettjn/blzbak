@@ -131,6 +131,13 @@ class DaemonClient:
             logger.debug("Ping failed: %s", exc)
             return False
 
+    def test(self) -> dict:
+        """Request test/diagnostic information from the daemon.
+
+        Returns daemon configuration, storage info, and health status.
+        """
+        return self._request({"cmd": Command.TEST})
+
     def prepare_backup(self, set_name: str) -> dict:
         """Signal the daemon to prepare for a new backup.
 
