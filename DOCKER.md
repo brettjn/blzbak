@@ -236,52 +236,56 @@ This directory is mapped to `./backups` on your host (or wherever you configured
 
 ### Understanding User and Permission Mapping:
 
-The Docker container creates and runs as user `blzbak` with **UID 1000** inside the container. When the container writes to `/blzbak` (inside the container), it's actually writing to your host directory (e.g., `/mnt/blzbak`) as UID 1000.
+The Docker container creates and runs as user `blzbak` inside the container. The UID of this user is configurable via the `USER_ID` build argument in `docker-compose.yml` (defaults to 1000). When the container writes to `/blzbak` (inside the container), it's actually writing to your host directory (e.g., `/mnt/blzbak`) with this UID.
 
 **For this to work properly:**
 
-#### If using a local directory (like `./backups`):
+#### Step 1: Find your host blzbak user's UID:
 ```bash
-mkdir -p backups
-sudo chown -R 1000:1000 backups
-chmod 755 backups
+id -u blzbak
+# Output: 997 (or whatever your UID is)
 ```
 
-#### If using a ZFS volume or other mount point (like `/mnt/blzbak`):
+#### Step 2: Update docker-compose.yml to match:
 
-1. **Check your host blzbak user's UID:**
-   ```bash
-   id blzbak
-   # Output: uid=1000(blzbak) gid=1000(blzbak) groups=1000(blzbak)
-   ```
+Edit `docker-compose.yml` and set `USER_ID` to match your host blzbak user:
 
-2. **If UID is 1000 (ideal case):**
-   ```bash
-   sudo chown -R blzbak:blzbak /mnt/blzbak
-   sudo chmod 755 /mnt/blzbak
-   ```
+```yaml
+services:
+  blzbakd:
+    build:
+      context: .
+      args:
+        USER_ID: 997  # Change this to match your host blzbak UID
+```
 
-3. **If UID is different (e.g., 1001):**
-   
-   Option A - Change host user to UID 1000 (recommended):
-   ```bash
-   sudo usermod -u 1000 blzbak
-   sudo groupmod -g 1000 blzbak
-   sudo chown -R 1000:1000 /mnt/blzbak
-   ```
-   
-   Option B - Rebuild Docker image with your host's UID:
-   Edit `Dockerfile` line `RUN useradd -m -u 1000 ...` to use your UID, then rebuild:
-   ```bash
-   docker-compose build --no-cache
-   ```
+#### Step 3: Ensure proper ownership on host:
+```bash
+# For ZFS volume or mount point
+sudo chown -R blzbak:blzbak /mnt/blzbak
+sudo chmod 755 /mnt/blzbak
 
-4. **Verify permissions before starting:**
-   ```bash
-   ls -ld /mnt/blzbak
-   # Should show: drwxr-xr-x ... 1000 1000 ... /mnt/blzbak
-   # Or: drwxr-xr-x ... blzbak blzbak ... /mnt/blzbak (if blzbak user is UID 1000)
-   ```
+# For local directory
+sudo chown -R blzbak:blzbak ./backups
+sudo chmod 755 ./backups
+```
+
+#### Step 4: Build and start:
+```bash
+# Build with the correct UID
+docker-compose build --no-cache
+
+# Start the container
+docker-compose up -d
+```
+
+#### Step 5: Verify permissions:
+```bash
+ls -ld /mnt/blzbak
+# Should show: drwxr-xr-x ... blzbak blzbak ... /mnt/blzbak
+```
+
+**Note:** If you change the `USER_ID` after already building the image, you MUST rebuild with `docker-compose build --no-cache` for the change to take effect.
 
 ## Verifying the Installation
 
@@ -398,11 +402,42 @@ docker-compose up -d
 
 **Important:** Inside the container, the volume is always mounted at `/blzbak`, regardless of where it's located on your host machine. Your `daemon.config` must use `/blzbak`.
 
-### Permission errors (backup directory):
-```bash
-# Fix backup directory permissions on the host
-sudo chown -R 1000:1000 ./backups
-```
+### Permission errors when writing to backup directory:
+
+**Symptom:** Container keeps restarting with "Permission denied" errors when trying to write to the backup directory.
+
+**Cause:** UID mismatch between the container user and the host directory ownership.
+
+**Solution:**
+
+1. Find your host blzbak user's UID:
+   ```bash
+   id -u blzbak
+   # Example output: 997
+   ```
+
+2. Update `docker-compose.yml` to use the correct UID:
+   ```yaml
+   services:
+     blzbakd:
+       build:
+         context: .
+         args:
+           USER_ID: 997  # Use your actual UID here
+   ```
+
+3. Ensure host directory is owned by your blzbak user:
+   ```bash
+   sudo chown -R blzbak:blzbak /mnt/blzbak
+   sudo chmod 755 /mnt/blzbak
+   ```
+
+4. Rebuild and restart:
+   ```bash
+   docker-compose down
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
 
 ### Connection refused:
 - Verify the container is running: `docker-compose ps`

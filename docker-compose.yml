@@ -2,7 +2,12 @@ version: '3.8'
 
 services:
   blzbakd:
-    build: .
+    build:
+      context: .
+      args:
+        # Set USER_ID to match your host blzbak user's UID
+        # Check with: id -u blzbak
+        USER_ID: 1000
     image: blzbak:latest
     container_name: blzbak-daemon
     restart: unless-stopped

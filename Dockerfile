@@ -1,6 +1,9 @@
 # Dockerfile for blzbak backup server daemon
 FROM python:3.10-slim
 
+# Build argument for user ID (defaults to 1000, can be overridden)
+ARG USER_ID=1000
+
 # Install rsync (required for backup operations)
 RUN apt-get update && \
     apt-get install -y rsync && \
@@ -8,7 +11,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for running the daemon
-RUN useradd -m -u 1000 -s /bin/bash blzbak
+# Uses USER_ID build argument to match host user
+RUN useradd -m -u ${USER_ID} -s /bin/bash blzbak
 
 # Set working directory
 WORKDIR /app
