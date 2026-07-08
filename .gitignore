@@ -235,3 +235,5 @@ work_log.txt
 
 #vscode settings    
 .vscode/    
+
+daemon.config
