@@ -9,8 +9,9 @@ services:
     ports:
       - "7890:7890"
     volumes:
-      # Backup storage directory - CHANGE THIS to your desired backup location
-      - ./backups:/blzbak
+      # Backup storage directory - Your ZFS RAID volume
+      # Change /mnt/blzbak to match your actual backup storage path
+      - /mnt/blzbak:/blzbak
       # Configuration file
       - ./daemon.config:/app/daemon.config:ro
     environment:

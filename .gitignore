@@ -236,4 +236,10 @@ work_log.txt
 #vscode settings    
 .vscode/    
 
+# Daemon config files
 daemon.config
+!daemon.config.example
+!daemon.config.docker
+
+# Backup storage directory
+backups/

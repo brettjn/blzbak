@@ -1,0 +1,26 @@
+# Docker daemon configuration for blzbakd
+# This is the configuration file to use when running blzbakd in Docker
+# Copy this to daemon.config before running docker-compose up -d
+
+# IMPORTANT: Inside the Docker container, the backup volume is mounted at /blzbak
+# Do NOT change this to /mnt/blzbak or any other path - use /blzbak
+base_path: /blzbak
+
+# TCP port for the daemon to listen on (default: 7890)
+# This port is mapped from the container to your host in docker-compose.yml
+port: 7890
+
+# Host/interface to bind to (default: 0.0.0.0 for all interfaces)
+# Use 0.0.0.0 to accept connections from other machines
+# Use 127.0.0.1 to only accept local connections (from within the container)
+host: 0.0.0.0
+
+# Maximum number of worker threads (default: 4)
+max_workers: 4
+
+# Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
+log_level: INFO
+
+# Directory for storing diff archives (default: {base_path}/diffs)
+# Uncomment to override (must be under /blzbak to work in Docker):
+# diff_dir: /blzbak/diffs

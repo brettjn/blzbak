@@ -51,6 +51,7 @@ daemon.config
 backups/
 *.yaml
 !daemon.config.example
+!daemon.config.docker
 
 # OS
 .DS_Store
