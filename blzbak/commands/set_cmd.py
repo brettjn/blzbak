@@ -8,6 +8,7 @@ import yaml
 
 from ..backup import list_backup_sets, load_backup_set, save_backup_set, delete_backup_set, get_set_path
 from ..config import load_ignore_patterns
+from ..cron import install_cron_job, remove_cron_job
 from ..models import BackupSet, ServerConfig, validate_set_name
 
 
@@ -67,6 +68,15 @@ def cmd_set_create(args, config: dict) -> int:
     )
     save_backup_set(bs, config)
     print(f"Backup set '{args.name}' created.")
+    
+    # Automatically install cron job
+    try:
+        install_cron_job(args.name, args.schedule)
+        print(f"Cron job installed: {args.schedule}")
+    except Exception as exc:
+        print(f"Warning: Failed to install cron job: {exc}", file=sys.stderr)
+        print("You can manually install it later with: blzbak cron install", file=sys.stderr)
+    
     return 0
 
 
@@ -74,6 +84,14 @@ def cmd_set_delete(args, config: dict) -> int:
     if not delete_backup_set(args.name, config):
         print(f"Error: backup set '{args.name}' not found.", file=sys.stderr)
         return 1
+    
+    # Also remove the cron job
+    try:
+        if remove_cron_job(args.name):
+            print(f"Cron job removed for '{args.name}'.")
+    except Exception as exc:
+        print(f"Warning: Failed to remove cron job: {exc}", file=sys.stderr)
+    
     print(f"Backup set '{args.name}' deleted.")
     return 0
 

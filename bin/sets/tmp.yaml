@@ -1,0 +1,13 @@
+name: tmp
+version: 1
+created_at: '2026-06-28T17:53:54.188761+00:00'
+updated_at: '2026-06-28T17:53:54.188823+00:00'
+source_paths:
+- /home/blizz/tmp
+schedule: 0 12 * * *
+server:
+  host: localhost
+  port: 7890
+  ssh_user: ''
+  dest_path: /blzbak/tmp
+exclude_patterns: []

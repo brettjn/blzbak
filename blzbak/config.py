@@ -25,6 +25,7 @@ CONFIG_FILENAME  = ".config"
 IGNORE_FILENAME  = ".blzbak-ignore"
 DEFAULT_PORT     = 7890
 DEFAULT_BACKUP_BASE = "/blzbak"
+DEFAULT_SETS_DIR = "/etc/blzbak"
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
             "ssh_user": "",
             "backup_base": DEFAULT_BACKUP_BASE,
         },
-        "sets_directory": str(get_executable_dir() / "sets"),
+        "sets_directory": DEFAULT_SETS_DIR,
         "log_level": "INFO",
     }
 

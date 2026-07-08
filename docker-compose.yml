@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  blzbakd:
+    build: .
+    image: blzbak:latest
+    container_name: blzbak-daemon
+    restart: unless-stopped
+    ports:
+      - "7890:7890"
+    volumes:
+      # Backup storage directory - CHANGE THIS to your desired backup location
+      - ./backups:/blzbak
+      # Configuration file
+      - ./daemon.config:/app/daemon.config:ro
+    environment:
+      # Set timezone if needed
+      - TZ=UTC
+    # Optionally limit resources
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 512M
+    networks:
+      - blzbak-network
+
+networks:
+  blzbak-network:
+    driver: bridge
