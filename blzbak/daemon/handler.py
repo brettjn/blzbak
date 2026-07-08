@@ -100,6 +100,7 @@ class ProtocolHandler:
             response["daemon"]["host"] = config.host
             response["daemon"]["max_workers"] = config.max_workers
             response["daemon"]["log_level"] = config.log_level
+            response["daemon"]["config_source"] = config.config_source
         
         # Check if base_path exists and is writable
         base_path = self.storage.base_path

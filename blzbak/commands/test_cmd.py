@@ -24,6 +24,13 @@ def cmd_test(args, config: dict, client: DaemonClient | None) -> int:
     print("1. Local Configuration")
     print("-" * 70)
     
+    # Show config source
+    config_source = config.get("_config_source")
+    if config_source:
+        print(f"  Config Source:     {config_source}")
+    else:
+        print(f"  Config Source:     (using defaults - no config file found)")
+    
     srv = config.get("server", {})
     sets_dir = config.get("sets_directory", "/etc/blzbak")
     log_level = config.get("log_level", "INFO")
@@ -116,6 +123,14 @@ def cmd_test(args, config: dict, client: DaemonClient | None) -> int:
             # Display daemon configuration
             daemon_info = response.get("daemon", {})
             print("  Daemon Configuration:")
+            
+            # Show config source
+            daemon_config_source = daemon_info.get('config_source')
+            if daemon_config_source:
+                print(f"    Config Source:      {daemon_config_source}")
+            else:
+                print(f"    Config Source:      (using defaults - no config file found)")
+            
             print(f"    Base Path:          {daemon_info.get('base_path', 'N/A')}")
             print(f"    Diff Directory:     {daemon_info.get('diff_dir', 'N/A')}")
             

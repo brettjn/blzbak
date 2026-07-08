@@ -25,6 +25,7 @@ class DaemonConfig:
     max_workers: int = 4
     log_level: str = "INFO"
     diff_dir: str = field(default="")  # Defaults to {base_path}/diffs
+    config_source: Optional[str] = None  # Path to config file if loaded, None if using defaults
 
     def __post_init__(self):
         """Set defaults that depend on other fields."""
@@ -73,6 +74,9 @@ class DaemonConfig:
                 else:
                     # Recalculate default diff_dir based on loaded base_path
                     config.diff_dir = os.path.join(config.base_path, "diffs")
+                
+                # Track where config was loaded from
+                config.config_source = str(config_path)
                     
             except Exception as e:
                 print(f"Warning: Failed to load config from {config_path}: {e}")
@@ -94,4 +98,5 @@ class DaemonConfig:
             "max_workers": self.max_workers,
             "log_level": self.log_level,
             "diff_dir": self.diff_dir,
+            "config_source": self.config_source,
         }

@@ -46,6 +46,9 @@ def load_config(config_path: Optional[Path] = None) -> dict:
     Args:
         config_path: Explicit path to a .config file.  When omitted the file
                      is searched for next to the executable.
+    
+    Returns:
+        Config dict with special "_config_source" key indicating where config was loaded from.
     """
     defaults: dict[str, Any] = {
         "server": {
@@ -56,6 +59,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
         },
         "sets_directory": DEFAULT_SETS_DIR,
         "log_level": "INFO",
+        "_config_source": None,  # Will be set to path if config file is loaded
     }
 
     path = config_path or _find_sibling(CONFIG_FILENAME)
@@ -63,6 +67,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
         with open(path) as f:
             file_cfg = yaml.safe_load(f) or {}
         _deep_merge(defaults, file_cfg)
+        defaults["_config_source"] = str(path)
         logger.debug("Loaded config from %s", path)
     else:
         logger.debug("No config file found; using defaults")
@@ -74,8 +79,12 @@ def save_config(config: dict, config_path: Optional[Path] = None) -> None:
     """Persist config dict to the .config YAML file."""
     path = config_path or (get_executable_dir() / CONFIG_FILENAME)
     path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Create a copy without internal metadata keys
+    save_dict = {k: v for k, v in config.items() if not k.startswith("_")}
+    
     with open(path, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+        yaml.dump(save_dict, f, default_flow_style=False, sort_keys=False)
 
 
 def load_ignore_patterns(ignore_path: Optional[Path] = None) -> list[str]:

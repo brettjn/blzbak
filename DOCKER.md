@@ -75,7 +75,8 @@ docker ps
 
 6. **Test the connection (from a client machine):**
    ```bash
-   blzbak test --server YOUR_SERVER_IP --port 7890
+   # Note: --server and --port must come BEFORE the test command
+   blzbak --server YOUR_SERVER_IP --port 7890 test
    ```
 
 ## Docker Compose Configuration
@@ -314,7 +315,11 @@ docker-compose logs blzbakd
 ### 3. Test Connection from Client:
 ```bash
 # From any machine with blzbak installed, test the connection
-blzbak test --server YOUR_SERVER_IP --port 7890
+# Note: --server and --port must come BEFORE the test command
+blzbak --server YOUR_SERVER_IP --port 7890 test
+
+# Example with actual IP:
+blzbak --server 10.0.0.177 --port 7890 test
 
 # This will display daemon configuration and confirm connectivity
 ```
@@ -323,7 +328,7 @@ blzbak test --server YOUR_SERVER_IP --port 7890
 ```bash
 # Install blzbak client if needed
 # Then test local connection
-blzbak test --server localhost --port 7890
+blzbak --server localhost --port 7890 test
 ```
 
 ## Troubleshooting
