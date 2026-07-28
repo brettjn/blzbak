@@ -9,14 +9,38 @@ any other cron lines the user may have.
 
 import logging
 import re
+import shutil
 import subprocess
 import sys
 from typing import Optional
+from pathlib import Path
+import os
 
 logger = logging.getLogger(__name__)
 
 _CRON_TAG    = "# blzbak-managed"
 _SET_TAG_RE  = re.compile(r"#\s*blzbak-managed:(\S+)")
+
+
+def _resolve_executable_path(cmd: str) -> str:
+    """Return an absolute path for the given executable string.
+
+    If `cmd` is already absolute, return it. Otherwise resolve it to an
+    absolute path. Use `shutil.which` if the command is a simple name,
+    or resolve relative paths using Path.resolve().
+    """
+    p = Path(cmd)
+    if p.is_absolute():
+        return str(p)
+    
+    # For simple command names (no slashes), try which first
+    if '/' not in cmd:
+        found = shutil.which(cmd)
+        if found:
+            return found
+    
+    # For relative paths or when which fails, resolve to absolute
+    return str(p.resolve().absolute())
 
 
 # ---------------------------------------------------------------------------
@@ -70,37 +94,120 @@ def install_cron_job(
     schedule: str,
     blzbak_cmd: Optional[str] = None,
 ) -> None:
-    """Install (or replace) the cron job for *set_name*."""
+    """Install (or replace) the cron job for *set_name* system-wide in /etc/cron.d.
+
+    This always writes a file under /etc/cron.d and will attempt to elevate
+    via `sudo` if direct writes are not permitted.
+    """
     if blzbak_cmd is None:
         blzbak_cmd = sys.argv[0]
-    crontab = _get_crontab()
-    # Remove existing entry for this set, keep all others
-    lines = [l for l in crontab.splitlines() if _set_tag_name(l) != set_name]
-    lines.append(_make_entry(schedule, set_name, blzbak_cmd))
-    _set_crontab("\n".join(lines) + "\n")
+    blzbak_cmd = _resolve_executable_path(blzbak_cmd)
+    install_system_cron_job(set_name, schedule, blzbak_cmd)
     logger.info("Cron job installed for '%s': %s", set_name, schedule)
 
 
 def remove_cron_job(set_name: str) -> bool:
     """Remove the cron job for *set_name*.  Returns True if one was removed."""
-    crontab = _get_crontab()
-    lines    = crontab.splitlines()
-    filtered = [l for l in lines if _set_tag_name(l) != set_name]
-    if len(filtered) == len(lines):
-        return False
-    _set_crontab("\n".join(filtered) + "\n")
-    logger.info("Cron job removed for '%s'", set_name)
-    return True
+    # Remove the system-wide cron.d file for this set
+    return remove_system_cron_job(set_name)
 
 
 def list_cron_jobs() -> list[dict]:
     """Return a list of dicts describing all blzbak-managed cron jobs."""
-    crontab = _get_crontab()
     jobs: list[dict] = []
-    for line in crontab.splitlines():
-        name = _set_tag_name(line)
-        if name:
-            parts    = line.split()
-            schedule = " ".join(parts[:5]) if len(parts) >= 5 else ""
-            jobs.append({"set_name": name, "schedule": schedule, "entry": line})
+    # Scan /etc/cron.d for blzbak-managed files only (system-wide)
+    cron_d = Path("/etc/cron.d")
+    if not cron_d.exists() or not cron_d.is_dir():
+        return jobs
+    for f in sorted(cron_d.glob("blzbak-*")):
+        try:
+            with open(f) as fh:
+                line = fh.read().strip()
+            name = _set_tag_name(line)
+            if name:
+                parts = line.split()
+                # system entries include a user field after schedule
+                schedule = " ".join(parts[:5]) if len(parts) >= 6 else ""
+                jobs.append({"set_name": name, "schedule": schedule, "entry": line})
+        except Exception:
+            continue
     return jobs
+
+
+# ---------------------------------------------------------------------------
+# System cron.d helpers
+# ---------------------------------------------------------------------------
+
+def _system_cron_path(set_name: str) -> Path:
+    return Path("/etc/cron.d") / f"blzbak-{set_name}"
+
+
+def install_system_cron_job(
+    set_name: str,
+    schedule: str,
+    blzbak_cmd: Optional[str] = None,
+    user: str = "root",
+) -> None:
+    """Install a cron job for *set_name* into /etc/cron.d.
+
+    The entry written uses the system cron.d format: <schedule> <user> <command>.
+    Raises RuntimeError on permission failures or other IO errors.
+    """
+    if blzbak_cmd is None:
+        blzbak_cmd = sys.argv[0]
+    blzbak_cmd = _resolve_executable_path(blzbak_cmd)
+    path = _system_cron_path(set_name)
+    # Ensure logging directory exists; prefer direct creation, fall back to sudo
+    log_dir = Path("/var/log/blzbak")
+    try:
+        if not log_dir.exists():
+            log_dir.mkdir(parents=True, exist_ok=True)
+            os.chmod(log_dir, 0o755)
+    except Exception:
+        # try creating with sudo
+        try:
+            subprocess.run(["sudo", "mkdir", "-p", str(log_dir)], check=True)
+            subprocess.run(["sudo", "chmod", "755", str(log_dir)], check=True)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"Failed to create log directory {log_dir!s}: {exc}") from exc
+
+    # Redirect stdout/stderr to system log files
+    stdout_log = "/var/log/blzbak/info.log"
+    stderr_log = "/var/log/blzbak/err.log"
+    redirect = f" >> {stdout_log} 2>> {stderr_log}"
+
+    # Place redirection before the managed-comment tag so shell redirection
+    # is not treated as a comment by cron parsers.
+    entry = f"{schedule} {user} {blzbak_cmd} backup run {set_name}{redirect} {_CRON_TAG}:{set_name}\n"
+    try:
+        # Ensure directory exists (should normally) and write file atomically
+        temp = Path(f"{path}.tmp")
+        with open(temp, "w") as fh:
+            fh.write(entry)
+        # Set permissions to 0644
+        os.chmod(temp, 0o644)
+        temp.replace(path)
+    except Exception as exc:
+        # If direct write fails (likely permission), attempt to write via sudo
+        try:
+            subprocess.run(["sudo", "tee", str(path)], input=entry, text=True, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["sudo", "chmod", "644", str(path)], check=True)
+        except subprocess.CalledProcessError as exc2:
+            raise RuntimeError(
+                f"Failed to write system cron file {path!s}: {exc2}; original error: {exc}"
+            ) from exc2
+    logger.info("Installed system cron job %s -> %s", set_name, path)
+
+
+def remove_system_cron_job(set_name: str) -> bool:
+    path = _system_cron_path(set_name)
+    try:
+        if path.exists():
+            path.unlink()
+            logger.info("Removed system cron job %s -> %s", set_name, path)
+            return True
+        return False
+    except PermissionError as exc:
+        raise RuntimeError(f"Permission denied removing {path!s}; try running as root") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Failed to remove system cron file {path!s}: {exc}") from exc

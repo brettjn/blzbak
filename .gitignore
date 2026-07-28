@@ -243,3 +243,8 @@ daemon.config
 
 # Backup storage directory
 backups/
+
+.config
+ToDo
+
+

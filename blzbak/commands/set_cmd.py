@@ -3,12 +3,13 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import yaml
 
 from ..backup import list_backup_sets, load_backup_set, save_backup_set, delete_backup_set, get_set_path
 from ..config import load_ignore_patterns
-from ..cron import install_cron_job, remove_cron_job
+from ..cron import install_cron_job, remove_cron_job, install_system_cron_job
 from ..models import BackupSet, ServerConfig, validate_set_name
 
 
@@ -17,12 +18,15 @@ def cmd_set_list(args, config: dict) -> int:
     if not sets:
         print("No backup sets configured.")
         return 0
-    fmt = "  {:<20}  {:<18}  {}"
-    print(fmt.format("NAME", "SCHEDULE", "SOURCE PATHS"))
-    print("  " + "-" * 72)
+    fmt = "  {:<20}  {:<18}  {:<22}  {}"
+    print(fmt.format("NAME", "SCHEDULE", "SERVER", "SOURCE PATHS"))
+    print("  " + "-" * 100)
     for s in sets:
         sources = ", ".join(s.source_paths) if s.source_paths else "(none)"
-        print(fmt.format(s.name, s.schedule, sources))
+        srv = "(none)"
+        if getattr(s, "server", None) and s.server.host:
+            srv = f"{s.server.host}:{s.server.port}"
+        print(fmt.format(s.name, s.schedule, srv, sources))
     return 0
 
 
@@ -71,8 +75,23 @@ def cmd_set_create(args, config: dict) -> int:
     
     # Automatically install cron job
     try:
-        install_cron_job(args.name, args.schedule)
-        print(f"Cron job installed: {args.schedule}")
+        # If the user explicitly provided --schedule, prefer system-wide
+        # installation in /etc/cron.d.  Fall back to per-user crontab on
+        # permission errors or when system install isn't possible.
+        explicit_schedule = any(
+            a == "--schedule" or a.startswith("--schedule=") for a in sys.argv
+        )
+        if explicit_schedule:
+            try:
+                install_system_cron_job(args.name, args.schedule)
+                print(f"System cron job installed: {args.schedule}")
+            except Exception as exc:
+                print(f"Warning: Failed to install system cron job: {exc}", file=sys.stderr)
+                install_cron_job(args.name, args.schedule)
+                print(f"Per-user cron job installed: {args.schedule}")
+        else:
+            install_cron_job(args.name, args.schedule)
+            print(f"Cron job installed: {args.schedule}")
     except Exception as exc:
         print(f"Warning: Failed to install cron job: {exc}", file=sys.stderr)
         print("You can manually install it later with: blzbak cron install", file=sys.stderr)
@@ -90,7 +109,25 @@ def cmd_set_delete(args, config: dict) -> int:
         if remove_cron_job(args.name):
             print(f"Cron job removed for '{args.name}'.")
     except Exception as exc:
-        print(f"Warning: Failed to remove cron job: {exc}", file=sys.stderr)
+        # If removal failed due to permissions on system /etc/cron.d file,
+        # offer to remove it via sudo so the delete can proceed.
+        cron_path = Path(f"/etc/cron.d/blzbak-{args.name}")
+        if cron_path.exists():
+            try:
+                resp = input(f"Removing the cron job requires elevated permissions. Use sudo to remove {cron_path}? [Y/n]: ")
+            except KeyboardInterrupt:
+                print("\nSkipped removing system cron job.", file=sys.stderr)
+                resp = "n"
+            if resp.strip() == "" or resp.strip().lower() in ("y", "yes"):
+                try:
+                    subprocess.run(["sudo", "rm", "-f", str(cron_path)], check=True)
+                    print(f"Cron job removed for '{args.name}' (via sudo).")
+                except subprocess.CalledProcessError as exc2:
+                    print(f"Warning: Failed to remove cron job with sudo: {exc2}", file=sys.stderr)
+            else:
+                print("Skipped removing system cron job.", file=sys.stderr)
+        else:
+            print(f"Warning: Failed to remove cron job: {exc}", file=sys.stderr)
     
     print(f"Backup set '{args.name}' deleted.")
     return 0

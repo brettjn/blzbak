@@ -30,7 +30,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from .config import load_config, setup_logging
+from .config import (
+    load_config,
+    setup_logging,
+    CONFIG_FILENAME,
+    IGNORE_FILENAME,
+    get_executable_dir,
+)
 from .client import DaemonClient, DaemonError
 from .commands import set_cmd, backup_cmd, restore_cmd, cron_cmd, test_cmd
 
@@ -40,10 +46,21 @@ from .commands import set_cmd, backup_cmd, restore_cmd, cron_cmd, test_cmd
 # ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
+    exe_dir = get_executable_dir()
+    epilog = (
+        "Configuration file locations:\n"
+        f"  - Explicit: use --config FILE\n"
+        f"  - Sibling of executable (config): {exe_dir / CONFIG_FILENAME}\n"
+        f"  - Sibling of executable (ignore): {exe_dir / IGNORE_FILENAME}\n"
+        f"Config file name: {CONFIG_FILENAME}\n"
+        f"Ignore file name: {IGNORE_FILENAME}\n"
+    )
+
     parser = argparse.ArgumentParser(
         prog="blzbak",
         description="blzbak — Automated backup system",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog,
     )
     parser.add_argument("--server",    metavar="HOST", help="Override server hostname from config")
     parser.add_argument("--port",      metavar="PORT", type=int, help="Override daemon port from config")
