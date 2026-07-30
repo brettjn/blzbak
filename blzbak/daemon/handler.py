@@ -187,7 +187,13 @@ class ProtocolHandler:
             return self._error_response("Missing 'set_name' parameter")
         
         logger.info(f"Backup completed for set '{set_name}'")
-        
+        # Update metadata and log finish time
+        try:
+            finished_meta = self.storage.mark_backup_complete(set_name)
+        except Exception as e:
+            logger.warning(f"Failed to update backup completion metadata for '{set_name}': {e}")
+            # Continue to return OK but warn the client
+
         # Get snapshot info for confirmation
         c_info = self.storage.get_snapshot_info(set_name, "C")
         
@@ -195,6 +201,7 @@ class ProtocolHandler:
             "status": "ok",
             "message": f"Backup complete for '{set_name}'",
             "snapshot": c_info.to_dict() if c_info.exists else None,
+            "metadata": finished_meta if 'finished_meta' in locals() else None,
         }
 
     def _handle_list_sets(self, request: Dict[str, Any]) -> Dict[str, Any]:

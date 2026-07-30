@@ -14,6 +14,7 @@ import os
 import subprocess
 import logging
 import time
+import yaml
 from pathlib import Path
 from typing import Optional, List, Dict
 from dataclasses import dataclass
@@ -140,7 +141,7 @@ class StorageManager:
         if c_path.exists() and o_path.exists():
             # Only create diff if O actually has files (not empty)
             o_has_content = self._dir_has_content(o_path)
-            
+
             if o_has_content:
                 logger.info(f"Creating diff between C and O for set '{set_name}'")
                 try:
@@ -153,7 +154,6 @@ class StorageManager:
                     raise
             else:
                 logger.info(f"Skipping diff creation - O is empty (first backup already completed)")
-            
             # Now sync O to match C
             logger.info(f"Syncing O to match C for set '{set_name}'")
             try:
@@ -175,6 +175,17 @@ class StorageManager:
             c_path.mkdir(parents=True, exist_ok=True)
             o_path.mkdir(parents=True, exist_ok=True)
         
+        # Write backup started metadata and append to backup.log now that
+        # the server has finished preparation and is ready to receive the
+        # client's rsync into the C snapshot.
+        try:
+            started_iso = datetime.now(timezone.utc).isoformat()
+            c_path.mkdir(parents=True, exist_ok=True)
+            self._write_backup_started_metadata(set_name, started_iso)
+            self._append_backup_log(set_name, f"Backup started: {started_iso}")
+        except Exception as e:
+            logger.warning(f"Failed to write backup started metadata for '{set_name}': {e}")
+
         return result
 
     def _create_diff(self, set_name: str, c_path: Path, o_path: Path) -> Path:
@@ -238,6 +249,63 @@ class StorageManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"rsync diff failed: {e.stderr}")
             raise RuntimeError(f"Failed to create diff: {e.stderr}")
+
+    def _append_backup_log(self, set_name: str, message: str) -> None:
+        """Append a timestamped message to the per-set backup.log file."""
+        try:
+            set_path = self.get_set_path(set_name)
+            log_path = set_path / "backup.log"
+            ts = datetime.now(timezone.utc).isoformat()
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, "a") as f:
+                f.write(f"{ts} - {message}\n")
+        except Exception as e:
+            logger.warning(f"Failed to append to backup.log for '{set_name}': {e}")
+
+    def _write_backup_started_metadata(self, set_name: str, started_iso: str) -> None:
+        """Write a .blzbak-metadata file into the C snapshot root with started timestamp."""
+        try:
+            c_path = self.get_snapshot_path(set_name, "C")
+            c_path.mkdir(parents=True, exist_ok=True)
+            meta_path = c_path / ".blzbak-metadata"
+            metadata = {
+                "set_name": set_name,
+                "started_at": started_iso,
+                "finished_at": None,
+            }
+            with open(meta_path, "w") as f:
+                yaml.dump(metadata, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            logger.warning(f"Failed to write .blzbak-metadata start for '{set_name}': {e}")
+
+    def mark_backup_complete(self, set_name: str, finished_iso: str = None) -> Dict[str, any]:
+        """Mark the backup as finished: update .blzbak-metadata and append to backup.log.
+
+        Returns the updated metadata dict.
+        """
+        try:
+            if finished_iso is None:
+                finished_iso = datetime.now(timezone.utc).isoformat()
+            c_path = self.get_snapshot_path(set_name, "C")
+            meta_path = c_path / ".blzbak-metadata"
+            metadata = {"set_name": set_name, "started_at": None, "finished_at": finished_iso}
+            if meta_path.exists():
+                try:
+                    with open(meta_path, "r") as f:
+                        existing = yaml.safe_load(f) or {}
+                    metadata.update(existing)
+                except Exception:
+                    pass
+            metadata["finished_at"] = finished_iso
+            with open(meta_path, "w") as f:
+                yaml.dump(metadata, f, default_flow_style=False, sort_keys=False)
+
+            # Append to backup.log
+            self._append_backup_log(set_name, f"Backup finished: {finished_iso}")
+            return metadata
+        except Exception as e:
+            logger.warning(f"Failed to mark backup complete for '{set_name}': {e}")
+            raise
             raise RuntimeError(f"Failed to create diff: {e.stderr}")
 
     def _sync_snapshots(self, source: Path, dest: Path) -> None:
@@ -400,7 +468,12 @@ class StorageManager:
             result["created_items"].append(f"Metadata file: {metadata_path}")
             result["metadata_path"] = str(metadata_path)
             logger.info(f"Created metadata file: {metadata_path}")
-            
+            # Append creation event to backup.log
+            try:
+                self._append_backup_log(set_name, f"Set created: {result['set_path']}")
+            except Exception:
+                pass
+
             return result
             
         except Exception as e:
