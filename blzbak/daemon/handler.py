@@ -40,6 +40,7 @@ class ProtocolHandler:
             Command.LIST_SNAPSHOTS: self._handle_list_snapshots,
             Command.LIST_FILES: self._handle_list_files,
             Command.DELETE_SET: self._handle_delete_set,
+            Command.SHOW_SET: self._handle_show_set,
         }
 
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,6 +279,20 @@ class ProtocolHandler:
                 f"Failed to list files for '{set_name}/{snapshot}/{path}': {e}"
             )
             return self._error_response(f"Failed to list files: {e}")
+
+    def _handle_show_set(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle SHOW_SET command - return parsed set.log entries."""
+        set_name = request.get("set_name")
+        if not set_name:
+            return self._error_response("Missing 'set_name' parameter")
+
+        try:
+            # Use storage._load_set_log() to retrieve entries (list newest-first)
+            entries = self.storage._load_set_log(set_name)
+            return {"status": "ok", "entries": entries}
+        except Exception as e:
+            logger.error(f"Failed to load set.log for '{set_name}': {e}")
+            return self._error_response(f"Failed to load set.log: {e}")
 
     # ------------------------------------------------------------------
     # Helper methods

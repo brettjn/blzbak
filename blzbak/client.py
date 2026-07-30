@@ -177,6 +177,11 @@ class DaemonClient:
         })
         return resp.get("files", [])
 
+    def show_set(self, set_name: str) -> list[dict]:
+        """Retrieve the set.log entries for a set from the daemon."""
+        resp = self._request({"cmd": Command.SHOW_SET, "set_name": set_name})
+        return resp.get("entries", [])
+
     def create_set(self, set_name: str, metadata: dict) -> dict:
         """Create a backup set on the server with metadata.
         
