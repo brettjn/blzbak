@@ -137,7 +137,7 @@ class DaemonServer:
                 f"blzbakd listening on {self.config.host}:{self.config.port}"
             )
             logger.info(f"Backup storage: {self.config.base_path}")
-            logger.info(f"Diff storage: {self.config.diff_dir}")
+            logger.info(f"Diffs stored per-set at: <base_path>/<set_name>/diffs/")
             
             self._accept_loop()
             

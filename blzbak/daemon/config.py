@@ -75,7 +75,6 @@ class DaemonConfig:
         # Ensure directories exist
         if create_dirs:
             Path(config.base_path).mkdir(parents=True, exist_ok=True)
-            Path(config.diff_dir).mkdir(parents=True, exist_ok=True)
         
         return config
 
