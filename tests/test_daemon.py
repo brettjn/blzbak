@@ -64,14 +64,12 @@ def storage():
     """Create a temporary storage manager for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         base_path = Path(tmpdir) / "backups"
-        diff_dir = Path(tmpdir) / "diffs"
-        yield StorageManager(str(base_path), str(diff_dir))
+        yield StorageManager(str(base_path))
 
 
 def test_storage_manager_init(storage):
     """Test storage manager initialization."""
     assert storage.base_path.exists()
-    assert storage.diff_dir.exists()
 
 
 def test_storage_list_sets_empty(storage):

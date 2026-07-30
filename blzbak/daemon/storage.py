@@ -5,10 +5,9 @@ Directory structure on the server:
         <set_name>/
             C/                  (current backup)
             O/                  (once-removed backup)
-            metadata.yaml       (backup set metadata)
-        diffs/
-            <set_name>/
+            diffs/              (diff archives)
                 <timestamp>.tar.gz
+            metadata.yaml       (backup set metadata)
 """
 
 import os
@@ -47,12 +46,10 @@ class SnapshotInfo:
 class StorageManager:
     """Manages backup storage on the server."""
 
-    def __init__(self, base_path: str, diff_dir: str, config=None):
+    def __init__(self, base_path: str, config=None):
         self.base_path = Path(base_path)
-        self.diff_dir = Path(diff_dir)
         self.config = config  # Store config for test command
         self.base_path.mkdir(parents=True, exist_ok=True)
-        self.diff_dir.mkdir(parents=True, exist_ok=True)
 
     def get_set_path(self, set_name: str) -> Path:
         """Get the base directory for a backup set."""
@@ -63,8 +60,12 @@ class StorageManager:
         return self.get_set_path(set_name) / label
 
     def get_diff_dir(self, set_name: str) -> Path:
-        """Get the diff directory for a backup set."""
-        diff_path = self.diff_dir / set_name
+        """Get the diff directory for a backup set.
+        
+        Diffs are stored within the backup set's directory:
+        /blzbak/<set_name>/diffs/
+        """
+        diff_path = self.get_set_path(set_name) / "diffs"
         diff_path.mkdir(parents=True, exist_ok=True)
         return diff_path
 

@@ -91,7 +91,6 @@ class ProtocolHandler:
             "message": "Test successful",
             "daemon": {
                 "base_path": str(self.storage.base_path),
-                "diff_dir": str(self.storage.diff_dir),
             },
             "sets": [],
         }

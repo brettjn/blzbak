@@ -1,5 +1,5 @@
 # Example daemon configuration for blzbakd
-# Place this file as .config in the same directory as the blzbakd executable
+# Place this file as config.yaml in the same directory as the blzbakd executable
 # or specify its location with: blzbakd --config /path/to/config.yaml
 
 # Base directory for storing backups (default: /blzbak)
@@ -18,6 +18,6 @@ max_workers: 4
 # Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
 log_level: INFO
 
-# Directory for storing diff archives (default: {base_path}/diffs)
-# Uncomment to override:
-# diff_dir: /var/backups/blzbak/diffs
+# NOTE: diff_dir config option has been removed.
+# Diffs are now stored within each backup set's directory:
+# {base_path}/<set_name>/diffs/

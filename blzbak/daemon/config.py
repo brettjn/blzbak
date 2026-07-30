@@ -24,13 +24,7 @@ class DaemonConfig:
     host: str = DEFAULT_HOST
     max_workers: int = 4
     log_level: str = "INFO"
-    diff_dir: str = field(default="")  # Defaults to {base_path}/diffs
     config_source: Optional[str] = None  # Path to config file if loaded, None if using defaults
-
-    def __post_init__(self):
-        """Set defaults that depend on other fields."""
-        if not self.diff_dir:
-            self.diff_dir = os.path.join(self.base_path, "diffs")
 
     @classmethod
     def load(cls, config_path: Optional[str] = None, create_dirs: bool = True) -> "DaemonConfig":
@@ -39,7 +33,7 @@ class DaemonConfig:
         Args:
             config_path: Path to config file. If None, looks for .config
                         in the directory containing the daemon executable.
-            create_dirs: If True, create base_path and diff_dir if they don't exist.
+            create_dirs: If True, create base_path if it doesn't exist.
         
         Returns:
             DaemonConfig instance with merged settings.
@@ -69,11 +63,7 @@ class DaemonConfig:
                     config.max_workers = int(data["max_workers"])
                 if "log_level" in data:
                     config.log_level = data["log_level"].upper()
-                if "diff_dir" in data:
-                    config.diff_dir = data["diff_dir"]
-                else:
-                    # Recalculate default diff_dir based on loaded base_path
-                    config.diff_dir = os.path.join(config.base_path, "diffs")
+                # Note: diff_dir is deprecated - diffs are now stored per-set
                 
                 # Track where config was loaded from
                 config.config_source = str(config_path)
@@ -97,6 +87,6 @@ class DaemonConfig:
             "host": self.host,
             "max_workers": self.max_workers,
             "log_level": self.log_level,
-            "diff_dir": self.diff_dir,
+
             "config_source": self.config_source,
         }

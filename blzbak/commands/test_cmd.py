@@ -132,7 +132,6 @@ def cmd_test(args, config: dict, client: DaemonClient | None) -> int:
                 print(f"    Config Source:      (using defaults - no config file found)")
             
             print(f"    Base Path:          {daemon_info.get('base_path', 'N/A')}")
-            print(f"    Diff Directory:     {daemon_info.get('diff_dir', 'N/A')}")
             
             if "host" in daemon_info:
                 print(f"    Listen Host:        {daemon_info.get('host', 'N/A')}")

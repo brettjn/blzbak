@@ -21,6 +21,6 @@ max_workers: 4
 # Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)
 log_level: INFO
 
-# Directory for storing diff archives (default: {base_path}/diffs)
-# Uncomment to override (must be under /blzbak to work in Docker):
-# diff_dir: /blzbak/diffs
+# NOTE: diff_dir config option has been removed.
+# Diffs are now stored within each backup set's directory:
+# /blzbak/<set_name>/diffs/

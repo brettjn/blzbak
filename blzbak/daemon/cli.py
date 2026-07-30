@@ -109,10 +109,7 @@ Configuration:
     # Apply command-line overrides
     if args.base_path:
         config.base_path = args.base_path
-        # Recalculate diff_dir based on new base_path
-        config.diff_dir = str(Path(config.base_path) / "diffs")
         Path(config.base_path).mkdir(parents=True, exist_ok=True)
-        Path(config.diff_dir).mkdir(parents=True, exist_ok=True)
     
     if args.port:
         config.port = args.port

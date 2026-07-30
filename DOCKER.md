@@ -216,14 +216,13 @@ Inside the container, backups are stored at `/blzbak`:
 ├── backup_set_1/
 │   ├── C/          # Current backup
 │   ├── O/          # Once-removed backup
+│   ├── diffs/      # Differential archives for this set
 │   └── metadata.yaml
-├── backup_set_2/
-│   ├── C/
-│   ├── O/
-│   └── metadata.yaml
-└── diffs/          # Differential archives
-    ├── backup_set_1/
-    └── backup_set_2/
+└── backup_set_2/
+    ├── C/
+    ├── O/
+    ├── diffs/
+    └── metadata.yaml
 ```
 
 This directory is mapped to `./backups` on your host (or wherever you configured it).

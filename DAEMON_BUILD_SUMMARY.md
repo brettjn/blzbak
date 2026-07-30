@@ -99,11 +99,15 @@ All tests pass successfully:
 │   │   └── ...client files...
 │   ├── O/                        (once-removed backup)
 │   │   └── ...previous version...
+│   ├── diffs/                    (differential archives)
+│   │   ├── diff_20260617_120000.tar.gz
+│   │   └── diff_20260617_130000.tar.gz
 │   └── metadata.yaml
-└── diffs/                        (differential archives)
-    └── backup_set_name/
-        ├── diff_20260617_120000.tar.gz
-        └── diff_20260617_130000.tar.gz
+└── another_backup_set/
+    ├── C/
+    ├── O/
+    ├── diffs/
+    └── metadata.yaml
 ```
 
 ### Backup Workflow
@@ -160,7 +164,6 @@ Response:
 | host | 0.0.0.0 | Interface to bind (0.0.0.0 = all) |
 | max_workers | 4 | Max concurrent client threads |
 | log_level | INFO | DEBUG, INFO, WARNING, ERROR |
-| diff_dir | {base_path}/diffs | Diff archive location |
 
 ## Production Deployment
 

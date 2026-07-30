@@ -37,7 +37,6 @@ blzbakd --config /etc/blzbak/daemon.config
 | `host` | `0.0.0.0` | Host/interface to bind to (0.0.0.0 = all) |
 | `max_workers` | `4` | Maximum concurrent worker threads |
 | `log_level` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `diff_dir` | `{base_path}/diffs` | Directory for storing diff archives |
 
 ### Example Configuration
 
@@ -54,17 +53,16 @@ The daemon organizes backups on disk as follows:
 │   │   └── ...files...
 │   ├── O/                    (Once-removed backup)
 │   │   └── ...files...
+│   ├── diffs/                (Diff archives)
+│   │   ├── diff_20260617_120000.tar.gz
+│   │   └── diff_20260617_130000.tar.gz
 │   └── metadata.yaml
-├── backup_set_2/
-│   ├── C/
-│   ├── O/
-│   └── metadata.yaml
-└── diffs/                    (diff archives)
-    ├── backup_set_1/
-    │   ├── diff_20260617_120000.tar.gz
-    │   └── diff_20260617_130000.tar.gz
-    └── backup_set_2/
-        └── diff_20260617_120000.tar.gz
+└── backup_set_2/
+    ├── C/
+    ├── O/
+    ├── diffs/
+    │   └── diff_20260617_120000.tar.gz
+    └── metadata.yaml
 ```
 
 ## Running the Daemon
