@@ -115,7 +115,7 @@ class StorageManager:
         
         Steps:
         1. Check if C and O exist
-        2. If both exist, create a diff between C and O
+        2. If both exist and O has content, create a diff between C and O
         3. Sync O to match C (rsync --delete)
         4. Return status
         
@@ -136,17 +136,23 @@ class StorageManager:
             "synced": False,
         }
         
-        # If both C and O exist, create a diff
+        # If both C and O exist, check if O has content before creating diff
         if c_path.exists() and o_path.exists():
-            logger.info(f"Creating diff between C and O for set '{set_name}'")
-            try:
-                diff_path = self._create_diff(set_name, c_path, o_path)
-                result["diff_created"] = True
-                result["diff_path"] = str(diff_path)
-                logger.info(f"Diff created: {diff_path}")
-            except Exception as e:
-                logger.error(f"Failed to create diff: {e}")
-                raise
+            # Only create diff if O actually has files (not empty)
+            o_has_content = self._dir_has_content(o_path)
+            
+            if o_has_content:
+                logger.info(f"Creating diff between C and O for set '{set_name}'")
+                try:
+                    diff_path = self._create_diff(set_name, c_path, o_path)
+                    result["diff_created"] = True
+                    result["diff_path"] = str(diff_path)
+                    logger.info(f"Diff created: {diff_path}")
+                except Exception as e:
+                    logger.error(f"Failed to create diff: {e}")
+                    raise
+            else:
+                logger.info(f"Skipping diff creation - O is empty (first backup already completed)")
             
             # Now sync O to match C
             logger.info(f"Syncing O to match C for set '{set_name}'")
@@ -174,14 +180,16 @@ class StorageManager:
     def _create_diff(self, set_name: str, c_path: Path, o_path: Path) -> Path:
         """Create a diff archive between C and O snapshots.
         
-        Uses rsync --dry-run to find differences, then creates a tar archive.
+        Archives all files from O that differ from C (or don't exist in C).
+        This preserves the old state before O is overwritten by C.
         """
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         diff_dir = self.get_diff_dir(set_name)
         diff_archive = diff_dir / f"diff_{timestamp}.tar.gz"
         
-        # Use rsync to generate a list of changed files
-        # rsync -an --out-format='%n' C/ O/ gives us the file list
+        # Use rsync to find files in O that differ from C
+        # rsync -an --delete O/ C/ shows what would be transferred from O to C
+        # These are files we need to preserve from O before overwriting it
         try:
             result = subprocess.run(
                 [
@@ -189,29 +197,30 @@ class StorageManager:
                     "-an",  # archive mode, dry-run
                     "--delete",
                     "--out-format=%n",
-                    f"{c_path}/",
                     f"{o_path}/",
+                    f"{c_path}/",
                 ],
                 capture_output=True,
                 text=True,
                 check=True,
             )
             
+            # All files listed (including ones marked for deletion) need to be saved from O
             changed_files = [
                 line.strip() for line in result.stdout.splitlines()
                 if line.strip() and not line.startswith("deleting ")
             ]
             
             if not changed_files:
-                logger.info("No changes detected between C and O")
+                logger.info("No differences found - O already matches C")
                 # Create an empty marker file
                 diff_archive.write_text(f"No changes at {timestamp}")
                 return diff_archive
             
-            logger.info(f"Found {len(changed_files)} changed files")
+            logger.info(f"Found {len(changed_files)} files to preserve from O")
             
             # Create tar archive of changed files from O
-            # We save the old versions from O before syncing
+            # We save the old versions from O before syncing C→O
             with subprocess.Popen(
                 ["tar", "-czf", str(diff_archive), "-C", str(o_path)]
                 + changed_files,
@@ -220,7 +229,7 @@ class StorageManager:
             ) as proc:
                 stdout, stderr = proc.communicate()
                 if proc.returncode != 0:
-                    # Some files might not exist in O (new files), that's okay
+                    # Log any errors but don't fail - some files might have been deleted
                     logger.debug(f"tar stderr: {stderr.decode()}")
             
             logger.info(f"Diff archive created: {diff_archive}")
@@ -228,6 +237,7 @@ class StorageManager:
             
         except subprocess.CalledProcessError as e:
             logger.error(f"rsync diff failed: {e.stderr}")
+            raise RuntimeError(f"Failed to create diff: {e.stderr}")
             raise RuntimeError(f"Failed to create diff: {e.stderr}")
 
     def _sync_snapshots(self, source: Path, dest: Path) -> None:
@@ -248,6 +258,19 @@ class StorageManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"rsync sync failed: {e.stderr}")
             raise RuntimeError(f"Failed to sync snapshots: {e.stderr}")
+
+    def _dir_has_content(self, path: Path) -> bool:
+        """Check if a directory contains any files or subdirectories.
+        
+        Returns:
+            True if directory contains at least one item, False if empty
+        """
+        try:
+            # Use iterator - stops at first item found (efficient for large dirs)
+            return any(path.iterdir())
+        except (PermissionError, OSError) as e:
+            logger.warning(f"Error checking if directory has content: {e}")
+            return False
 
     def _get_dir_size(self, path: Path) -> int:
         """Calculate total size of a directory in bytes."""
