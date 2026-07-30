@@ -307,7 +307,6 @@ class StorageManager:
             "started_at": started_iso,
             "finished_at": None,
             "location_type": "C",
-            "location": "C/",
         }
         # Prepend
         entries.insert(0, new_entry)
@@ -324,8 +323,7 @@ class StorageManager:
         # previous entry is at index 1 (newest first)
         prev = entries[1]
         prev["diff_path"] = str(diff_path)
-        prev["location_type"] = "O"
-        prev["location"] = "O/"
+        prev["location_type"] = "diff"
         entries[1] = prev
         self._write_set_log(set_name, entries)
 
@@ -338,11 +336,9 @@ class StorageManager:
             return
         entries[0]["finished_at"] = finished_iso
         entries[0]["location_type"] = "C"
-        entries[0]["location"] = "C/"
         # Ensure second entry reflects O
         if len(entries) >= 2:
             entries[1]["location_type"] = "O"
-            entries[1]["location"] = "O/"
         self._write_set_log(set_name, entries)
 
     def _append_backup_log(self, set_name: str, message: str) -> None:
