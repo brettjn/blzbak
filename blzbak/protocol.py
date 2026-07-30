@@ -17,6 +17,7 @@ HEADER_SIZE = struct.calcsize(_HEADER_FORMAT)
 class Command:
     PING             = "PING"
     TEST             = "TEST"
+    CREATE_SET       = "CREATE_SET"
     PREPARE_BACKUP   = "PREPARE_BACKUP"
     BACKUP_COMPLETE  = "BACKUP_COMPLETE"
     LIST_SETS        = "LIST_SETS"

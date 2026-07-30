@@ -309,6 +309,88 @@ class StorageManager:
         
         return files
 
+    def create_set(self, set_name: str, metadata: dict) -> Dict[str, any]:
+        """Create a new backup set with directory structure and metadata.
+        
+        Creates:
+        - Set base directory
+        - C (current) snapshot directory
+        - O (once-removed) snapshot directory
+        - metadata.yaml file with backup set configuration
+        
+        Args:
+            set_name: Name of the backup set
+            metadata: Dictionary containing backup set configuration
+            
+        Returns:
+            Dict with details about created items
+            
+        Raises:
+            FileExistsError: If the backup set already exists
+            RuntimeError: If creation fails
+        """
+        import yaml
+        from datetime import datetime, timezone
+        
+        set_path = self.get_set_path(set_name)
+        
+        if set_path.exists():
+            raise FileExistsError(f"Backup set '{set_name}' already exists")
+        
+        result = {
+            "set_name": set_name,
+            "set_path": str(set_path),
+            "created_items": [],
+        }
+        
+        try:
+            # Create set directory
+            set_path.mkdir(parents=True, exist_ok=False)
+            result["created_items"].append(f"Set directory: {set_path}")
+            logger.info(f"Created set directory: {set_path}")
+            
+            # Create C snapshot directory
+            c_path = self.get_snapshot_path(set_name, "C")
+            c_path.mkdir(parents=True, exist_ok=False)
+            result["created_items"].append(f"C snapshot directory: {c_path}")
+            logger.info(f"Created C snapshot directory: {c_path}")
+            
+            # Create O snapshot directory
+            o_path = self.get_snapshot_path(set_name, "O")
+            o_path.mkdir(parents=True, exist_ok=False)
+            result["created_items"].append(f"O snapshot directory: {o_path}")
+            logger.info(f"Created O snapshot directory: {o_path}")
+            
+            # Create metadata.yaml
+            metadata_path = set_path / "metadata.yaml"
+            metadata_content = {
+                "name": set_name,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                **metadata,  # Include all metadata from client
+            }
+            
+            with open(metadata_path, "w") as f:
+                yaml.dump(metadata_content, f, default_flow_style=False, sort_keys=False)
+            
+            result["created_items"].append(f"Metadata file: {metadata_path}")
+            result["metadata_path"] = str(metadata_path)
+            logger.info(f"Created metadata file: {metadata_path}")
+            
+            return result
+            
+        except Exception as e:
+            # Clean up on failure
+            logger.error(f"Failed to create backup set '{set_name}': {e}")
+            if set_path.exists():
+                import shutil
+                try:
+                    shutil.rmtree(set_path)
+                    logger.info(f"Cleaned up partial creation: {set_path}")
+                except Exception as cleanup_err:
+                    logger.error(f"Failed to clean up after error: {cleanup_err}")
+            raise RuntimeError(f"Failed to create backup set: {e}") from e
+
     def delete_set(self, set_name: str) -> Dict[str, any]:
         """Delete a backup set and all associated data.
         

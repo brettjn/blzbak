@@ -33,6 +33,7 @@ class ProtocolHandler:
         self._handlers = {
             Command.PING: self._handle_ping,
             Command.TEST: self._handle_test,
+            Command.CREATE_SET: self._handle_create_set,
             Command.PREPARE_BACKUP: self._handle_prepare_backup,
             Command.BACKUP_COMPLETE: self._handle_backup_complete,
             Command.LIST_SETS: self._handle_list_sets,
@@ -129,6 +130,28 @@ class ProtocolHandler:
             response["sets_error"] = str(e)
         
         return response
+
+    def _handle_create_set(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle CREATE_SET command - create a new backup set with metadata."""
+        set_name = request.get("set_name")
+        if not set_name:
+            return self._error_response("Missing 'set_name' parameter")
+        
+        metadata = request.get("metadata", {})
+        
+        logger.info(f"Creating backup set '{set_name}'")
+        
+        try:
+            result = self.storage.create_set(set_name, metadata)
+            
+            return {
+                "status": "ok",
+                "message": f"Backup set '{set_name}' created successfully",
+                "details": result,
+            }
+        except Exception as e:
+            logger.error(f"Failed to create backup set '{set_name}': {e}")
+            return self._error_response(f"Failed to create backup set: {e}")
 
     def _handle_prepare_backup(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle PREPARE_BACKUP command.

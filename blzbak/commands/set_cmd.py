@@ -71,8 +71,60 @@ def cmd_set_create(args, config: dict) -> int:
         schedule         = args.schedule,
         exclude_patterns = exclude_patterns,
     )
+    
+    # Create backup set on the server first
+    if server.host:
+        from ..client import DaemonClient, DaemonError
+        try:
+            print(f"Connecting to server {server.host}:{server.port}...")
+            with DaemonClient(server.host, server.port) as client:
+                # Reconstruct the command line that was used
+                import sys as sys_module
+                command_line = " ".join(sys_module.argv)
+                
+                # Prepare metadata to send to server
+                metadata = {
+                    "command_line": command_line,
+                    "source_paths": args.sources,
+                    "schedule": args.schedule,
+                    "exclude_patterns": exclude_patterns,
+                    "server": {
+                        "host": server.host,
+                        "port": server.port,
+                        "dest_path": server.dest_path,
+                    },
+                }
+                
+                print(f"Creating backup set '{args.name}' on remote server...")
+                response = client.create_set(args.name, metadata)
+                
+                if response.get("status") == "ok":
+                    print(f"Successfully created backup set '{args.name}' on server.")
+                    details = response.get("details", {})
+                    created_items = details.get("created_items", [])
+                    if created_items:
+                        print("\nCreated on server:")
+                        for item in created_items:
+                            print(f"  - {item}")
+                else:
+                    print(f"Error from server: {response.get('message', 'Unknown error')}", file=sys.stderr)
+                    return 1
+        except DaemonError as e:
+            print(f"Error from daemon: {e}", file=sys.stderr)
+            return 1
+        except ConnectionError as e:
+            print(f"Error connecting to daemon: {e}", file=sys.stderr)
+            print("The server must be running to create a backup set.", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error creating backup set on server: {e}", file=sys.stderr)
+            return 1
+    else:
+        print("Warning: No server configured. Backup set created locally only.", file=sys.stderr)
+    
+    # Now save the local configuration
     save_backup_set(bs, config)
-    print(f"Backup set '{args.name}' created.")
+    print(f"\nBackup set '{args.name}' configuration saved locally.")
     
     # Automatically install cron job
     try:

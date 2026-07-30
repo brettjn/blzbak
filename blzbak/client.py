@@ -177,6 +177,30 @@ class DaemonClient:
         })
         return resp.get("files", [])
 
+    def create_set(self, set_name: str, metadata: dict) -> dict:
+        """Create a backup set on the server with metadata.
+        
+        Creates the set directory structure and stores metadata including:
+        - The command line used to create the set
+        - Source paths
+        - Schedule/cron configuration
+        - Exclude patterns
+        - Creation timestamp
+        
+        Args:
+            set_name: Name of the backup set
+            metadata: Dict containing backup set configuration and metadata
+            
+        Returns:
+            Response dict with status and set path information
+        """
+        logger.info("Creating backup set '%s' on server", set_name)
+        return self._request({
+            "cmd": Command.CREATE_SET,
+            "set_name": set_name,
+            "metadata": metadata,
+        })
+
     def delete_set(self, set_name: str) -> dict:
         """Delete a backup set on the server, including all snapshots and diffs.
         

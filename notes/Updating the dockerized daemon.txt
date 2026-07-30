@@ -1,0 +1,39 @@
+Shutdown the Docker Daemon
+==========================
+# Navigate to the project directory (where docker-compose.yml is located)
+cd /path/to/blzbak
+
+# Stop the daemon container
+docker-compose down
+
+<<This will stop and remove the container, but your backup data in /mnt/blzbak (or wherever you mounted it) will be preserved.>>
+
+
+Pull Updates from GitHub
+========================
+git pull
+
+Rebuild the Docker image with the updated code
+==============================================
+docker-compose build
+
+Start the daemon in detached mode
+==============================================
+docker-compose up -d
+
+Verify It's Running
+==============================================
+# Check the container status
+docker-compose ps
+
+# View the logs to ensure it started successfully
+docker-compose logs -f
+# Press Ctrl+C to exit log viewing
+
+# Test the connection from a client
+blzbak --server YOUR_SERVER_IP --port 7890 test
+
+One-Step Update (Shortcut)
+If you want to do it all in one go:
+
+
