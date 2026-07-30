@@ -25,11 +25,27 @@ def build_backup_cmd(
     dest: str,
     exclude_patterns: list[str],
     *,
+    ssh_key_path: str = "",
     dry_run: bool = False,
     verbose: bool = False,
 ) -> list[str]:
     """Return an rsync command list for a backup operation."""
     cmd = ["rsync", "-az", "--delete"]
+    
+    # Build SSH command with options for host key handling and optional identity file
+    ssh_opts = []
+    if ssh_key_path:
+        ssh_opts.extend(["-i", ssh_key_path])
+    ssh_opts.extend([
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "UserKnownHostsFile=/var/lib/blzbak/known_hosts",
+    ])
+    
+    if ssh_opts:
+        # Quote the entire SSH command properly for rsync's -e option
+        ssh_cmd = "ssh " + " ".join(ssh_opts)
+        cmd.extend(["-e", ssh_cmd])
+    
     if dry_run:
         cmd.append("--dry-run")
     if verbose:
@@ -47,11 +63,27 @@ def build_restore_cmd(
     remote_source: str,
     dest_root: str,
     *,
+    ssh_key_path: str = "",
     dry_run: bool = False,
     verbose: bool = False,
 ) -> list[str]:
     """Return an rsync command list for a restore operation."""
     cmd = ["rsync", "-az", "--relative"]
+    
+    # Build SSH command with options for host key handling and optional identity file
+    ssh_opts = []
+    if ssh_key_path:
+        ssh_opts.extend(["-i", ssh_key_path])
+    ssh_opts.extend([
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "UserKnownHostsFile=/var/lib/blzbak/known_hosts",
+    ])
+    
+    if ssh_opts:
+        # Quote the entire SSH command properly for rsync's -e option
+        ssh_cmd = "ssh " + " ".join(ssh_opts)
+        cmd.extend(["-e", ssh_cmd])
+    
     if dry_run:
         cmd.append("--dry-run")
     if verbose:

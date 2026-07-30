@@ -33,6 +33,7 @@ The config file is YAML. Known fields:
   - `host`: daemon hostname (default: `localhost`)
   - `port`: daemon port (default: `7890`)
   - `ssh_user`: SSH user for server operations (optional)
+  - `ssh_key_path`: path to SSH private key for rsync operations (optional)
   - `backup_base`: base path on server for backup sets (default: `/blzbak`)
 - `sets_directory`: directory where backup set definitions live (default: `/etc/blzbak`)
 - `log_level`: logging level (e.g. `INFO`, `DEBUG`)
@@ -44,9 +45,19 @@ server:
   host: 192.168.1.100
   port: 7890
   ssh_user: backup
+  ssh_key_path: /home/user/.ssh/id_rsa
   backup_base: /blzbak
 sets_directory: /opt/blzbak/sets
 log_level: INFO
+```
+
+**SSH Key Override**
+
+You can override the SSH key path on the command line for any backup or restore operation:
+
+```bash
+blzbak --ssh-key /path/to/custom_key backup run MYBACKUP
+blzbak --ssh-key ~/.ssh/special_key restore file MYBACKUP /path/to/file
 ```
 
 **Ignore file**

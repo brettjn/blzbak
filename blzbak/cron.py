@@ -157,19 +157,23 @@ def install_system_cron_job(
         blzbak_cmd = sys.argv[0]
     blzbak_cmd = _resolve_executable_path(blzbak_cmd)
     path = _system_cron_path(set_name)
-    # Ensure logging directory exists; prefer direct creation, fall back to sudo
+    
+    # Ensure required directories exist; prefer direct creation, fall back to sudo
     log_dir = Path("/var/log/blzbak")
-    try:
-        if not log_dir.exists():
-            log_dir.mkdir(parents=True, exist_ok=True)
-            os.chmod(log_dir, 0o755)
-    except Exception:
-        # try creating with sudo
+    lib_dir = Path("/var/lib/blzbak")
+    
+    for dir_path in [log_dir, lib_dir]:
         try:
-            subprocess.run(["sudo", "mkdir", "-p", str(log_dir)], check=True)
-            subprocess.run(["sudo", "chmod", "755", str(log_dir)], check=True)
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(f"Failed to create log directory {log_dir!s}: {exc}") from exc
+            if not dir_path.exists():
+                dir_path.mkdir(parents=True, exist_ok=True)
+                os.chmod(dir_path, 0o755)
+        except Exception:
+            # try creating with sudo
+            try:
+                subprocess.run(["sudo", "mkdir", "-p", str(dir_path)], check=True)
+                subprocess.run(["sudo", "chmod", "755", str(dir_path)], check=True)
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(f"Failed to create directory {dir_path!s}: {exc}") from exc
 
     # Redirect stdout/stderr to system log files
     stdout_log = "/var/log/blzbak/info.log"

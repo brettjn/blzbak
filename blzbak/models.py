@@ -26,6 +26,7 @@ class ServerConfig:
     host: str
     port: int = 7890
     ssh_user: str = ""
+    ssh_key_path: str = ""      # Path to SSH private key for rsync operations
     dest_path: str = ""         # Absolute path for this backup set on the server
 
     def rsync_dest(self, subdir: str = "C") -> str:
@@ -38,6 +39,7 @@ class ServerConfig:
             "host": self.host,
             "port": self.port,
             "ssh_user": self.ssh_user,
+            "ssh_key_path": self.ssh_key_path,
             "dest_path": self.dest_path,
         }
 
@@ -47,6 +49,7 @@ class ServerConfig:
             host=data.get("host", ""),
             port=int(data.get("port", 7890)),
             ssh_user=data.get("ssh_user", ""),
+            ssh_key_path=data.get("ssh_key_path", ""),
             dest_path=data.get("dest_path", ""),
         )
 

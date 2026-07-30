@@ -22,6 +22,7 @@ class Command:
     LIST_SETS        = "LIST_SETS"
     LIST_SNAPSHOTS   = "LIST_SNAPSHOTS"
     LIST_FILES       = "LIST_FILES"
+    DELETE_SET       = "DELETE_SET"
 
 
 def encode_message(data: dict) -> bytes:

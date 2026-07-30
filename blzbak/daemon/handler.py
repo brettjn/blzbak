@@ -38,6 +38,7 @@ class ProtocolHandler:
             Command.LIST_SETS: self._handle_list_sets,
             Command.LIST_SNAPSHOTS: self._handle_list_snapshots,
             Command.LIST_FILES: self._handle_list_files,
+            Command.DELETE_SET: self._handle_delete_set,
         }
 
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -201,6 +202,32 @@ class ProtocolHandler:
         except Exception as e:
             logger.error(f"Failed to list snapshots for '{set_name}': {e}")
             return self._error_response(f"Failed to list snapshots: {e}")
+
+    def _handle_delete_set(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle DELETE_SET command - delete a backup set and all its data.
+        
+        Removes:
+        - C and O snapshot directories
+        - All diff archives
+        - The set's base directory
+        """
+        set_name = request.get("set_name")
+        if not set_name:
+            return self._error_response("Missing 'set_name' parameter")
+        
+        logger.info(f"Deleting backup set '{set_name}'")
+        
+        try:
+            result = self.storage.delete_set(set_name)
+            
+            return {
+                "status": "ok",
+                "message": f"Backup set '{set_name}' deleted successfully",
+                "details": result,
+            }
+        except Exception as e:
+            logger.error(f"Failed to delete backup set '{set_name}': {e}")
+            return self._error_response(f"Failed to delete backup set: {e}")
 
     def _handle_list_files(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle LIST_FILES command - list files in a snapshot."""

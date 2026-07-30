@@ -9,6 +9,7 @@ Config file format (YAML):
       host: 192.168.1.100
       port: 7890
       ssh_user: backup
+      ssh_key_path: /home/user/.ssh/id_rsa  # Path to SSH private key (optional)
       backup_base: /blzbak      # base path for all backup sets on the server
     sets_directory: /opt/blzbak/sets
     log_level: INFO
@@ -55,6 +56,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
             "host": "localhost",
             "port": DEFAULT_PORT,
             "ssh_user": "",
+            "ssh_key_path": "",
             "backup_base": DEFAULT_BACKUP_BASE,
         },
         "sets_directory": DEFAULT_SETS_DIR,

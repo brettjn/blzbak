@@ -35,10 +35,11 @@ def _resolve_dest(args) -> str:
     return answer
 
 
-def _do_restore(remote_source: str, dest: str, args) -> int:
+def _do_restore(remote_source: str, dest: str, args, ssh_key_path: str = "") -> int:
     cmd = build_restore_cmd(
         remote_source = remote_source,
         dest_root     = dest if dest else "/",
+        ssh_key_path  = ssh_key_path,
         dry_run       = getattr(args, "dry_run", False),
         verbose       = getattr(args, "verbose", False),
     )
@@ -57,7 +58,7 @@ def cmd_restore_file(args, config: dict, client: DaemonClient) -> int:
     file_path     = args.file.lstrip("/")
     remote_source = f"{remote_base}/./{file_path}"
 
-    rc = _do_restore(remote_source, dest, args)
+    rc = _do_restore(remote_source, dest, args, bs.server.ssh_key_path)
     if rc == 0:
         print("[blzbak] File restored successfully.")
     else:
@@ -77,7 +78,7 @@ def cmd_restore_folder(args, config: dict, client: DaemonClient) -> int:
     folder_path   = args.folder.strip("/") + "/"
     remote_source = f"{remote_base}/./{folder_path}"
 
-    rc = _do_restore(remote_source, dest, args)
+    rc = _do_restore(remote_source, dest, args, bs.server.ssh_key_path)
     if rc == 0:
         print("[blzbak] Folder restored successfully.")
     else:
@@ -97,7 +98,7 @@ def cmd_restore_set(args, config: dict, client: DaemonClient) -> int:
     # Trailing slash restores contents; /./ root preserves path structure
     remote_source = f"{remote_base}/./"
 
-    rc = _do_restore(remote_source, dest, args)
+    rc = _do_restore(remote_source, dest, args, bs.server.ssh_key_path)
     if rc == 0:
         print("[blzbak] Backup set restored successfully.")
     else:

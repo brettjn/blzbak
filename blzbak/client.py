@@ -176,3 +176,17 @@ class DaemonClient:
             "path": path,
         })
         return resp.get("files", [])
+
+    def delete_set(self, set_name: str) -> dict:
+        """Delete a backup set on the server, including all snapshots and diffs.
+        
+        This permanently removes:
+        - The C and O snapshot directories
+        - All diff archives for this set
+        - The set's base directory
+        
+        Returns:
+            Response dict with status and details about deleted items
+        """
+        logger.info("Requesting deletion of backup set '%s'", set_name)
+        return self._request({"cmd": Command.DELETE_SET, "set_name": set_name})

@@ -26,6 +26,7 @@ def cmd_backup_run(args, config: dict, client: DaemonClient) -> int:
         source_paths     = bs.source_paths,
         dest             = dest,
         exclude_patterns = bs.exclude_patterns,
+        ssh_key_path     = bs.server.ssh_key_path,
         dry_run          = getattr(args, "dry_run", False),
         verbose          = getattr(args, "verbose", False),
     )

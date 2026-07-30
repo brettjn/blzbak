@@ -53,10 +53,11 @@ def cmd_set_create(args, config: dict) -> int:
     srv      = config.get("server", {})
     bak_base = srv.get("backup_base", "/blzbak")
     server   = ServerConfig(
-        host      = srv.get("host", ""),
-        port      = int(srv.get("port", 7890)),
-        ssh_user  = srv.get("ssh_user", ""),
-        dest_path = f"{bak_base}/{args.name}",
+        host         = srv.get("host", ""),
+        port         = int(srv.get("port", 7890)),
+        ssh_user     = srv.get("ssh_user", ""),
+        ssh_key_path = srv.get("ssh_key_path", ""),
+        dest_path    = f"{bak_base}/{args.name}",
     )
 
     # Snapshot the current ignore patterns into the set so future global
@@ -100,6 +101,48 @@ def cmd_set_create(args, config: dict) -> int:
 
 
 def cmd_set_delete(args, config: dict) -> int:
+    # Handle remote deletion if requested
+    if hasattr(args, 'delete_remote') and args.delete_remote:
+        bs = load_backup_set(args.name, config)
+        if not bs:
+            print(f"Error: backup set '{args.name}' not found.", file=sys.stderr)
+            return 1
+        
+        # Connect to daemon and delete remote data
+        from ..client import DaemonClient, DaemonError
+        try:
+            server = bs.server
+            if not server or not server.host:
+                print(f"Error: backup set '{args.name}' has no server configured.", file=sys.stderr)
+                return 1
+            
+            print(f"Connecting to server {server.host}:{server.port}...")
+            with DaemonClient(server.host, server.port) as client:
+                print(f"Deleting backup set '{args.name}' on remote server...")
+                response = client.delete_set(args.name)
+                
+                if response.get("status") == "ok":
+                    print(f"Successfully deleted remote backup set '{args.name}'.")
+                    details = response.get("details", {})
+                    deleted_items = details.get("deleted_items", [])
+                    if deleted_items:
+                        print("\nDeleted items:")
+                        for item in deleted_items:
+                            print(f"  - {item}")
+                else:
+                    print(f"Error: {response.get('message', 'Unknown error')}", file=sys.stderr)
+                    return 1
+        except DaemonError as e:
+            print(f"Error from daemon: {e}", file=sys.stderr)
+            return 1
+        except ConnectionError as e:
+            print(f"Error connecting to daemon: {e}", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error deleting remote backup set: {e}", file=sys.stderr)
+            return 1
+    
+    # Delete local configuration
     if not delete_backup_set(args.name, config):
         print(f"Error: backup set '{args.name}' not found.", file=sys.stderr)
         return 1

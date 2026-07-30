@@ -308,3 +308,86 @@ class StorageManager:
             logger.warning(f"Permission denied listing {target_path}")
         
         return files
+
+    def delete_set(self, set_name: str) -> Dict[str, any]:
+        """Delete a backup set and all associated data.
+        
+        Removes:
+        - C and O snapshot directories and all their contents
+        - All diff archives for this set
+        - The set's base directory
+        
+        Args:
+            set_name: Name of the backup set to delete
+            
+        Returns:
+            Dict with details about what was deleted
+            
+        Raises:
+            FileNotFoundError: If the backup set doesn't exist
+            RuntimeError: If deletion fails
+        """
+        import shutil
+        
+        set_path = self.get_set_path(set_name)
+        diff_path = self.get_diff_dir(set_name)
+        
+        if not set_path.exists():
+            raise FileNotFoundError(f"Backup set '{set_name}' does not exist")
+        
+        result = {
+            "set_name": set_name,
+            "deleted_items": [],
+            "errors": [],
+        }
+        
+        # Delete C snapshot
+        c_path = self.get_snapshot_path(set_name, "C")
+        if c_path.exists():
+            try:
+                shutil.rmtree(c_path)
+                result["deleted_items"].append(f"C snapshot: {c_path}")
+                logger.info(f"Deleted C snapshot: {c_path}")
+            except Exception as e:
+                error_msg = f"Failed to delete C snapshot: {e}"
+                result["errors"].append(error_msg)
+                logger.error(error_msg)
+        
+        # Delete O snapshot
+        o_path = self.get_snapshot_path(set_name, "O")
+        if o_path.exists():
+            try:
+                shutil.rmtree(o_path)
+                result["deleted_items"].append(f"O snapshot: {o_path}")
+                logger.info(f"Deleted O snapshot: {o_path}")
+            except Exception as e:
+                error_msg = f"Failed to delete O snapshot: {e}"
+                result["errors"].append(error_msg)
+                logger.error(error_msg)
+        
+        # Delete diff archives
+        if diff_path.exists():
+            try:
+                diff_count = len(list(diff_path.glob("*.tar.gz")))
+                shutil.rmtree(diff_path)
+                result["deleted_items"].append(f"Diff archives: {diff_path} ({diff_count} files)")
+                logger.info(f"Deleted diff directory: {diff_path}")
+            except Exception as e:
+                error_msg = f"Failed to delete diff archives: {e}"
+                result["errors"].append(error_msg)
+                logger.error(error_msg)
+        
+        # Delete set directory (should be empty now, or may contain metadata.yaml)
+        try:
+            shutil.rmtree(set_path)
+            result["deleted_items"].append(f"Set directory: {set_path}")
+            logger.info(f"Deleted set directory: {set_path}")
+        except Exception as e:
+            error_msg = f"Failed to delete set directory: {e}"
+            result["errors"].append(error_msg)
+            logger.error(error_msg)
+        
+        if result["errors"]:
+            raise RuntimeError(f"Partial deletion completed with {len(result['errors'])} error(s)")
+        
+        return result

@@ -64,6 +64,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--server",    metavar="HOST", help="Override server hostname from config")
     parser.add_argument("--port",      metavar="PORT", type=int, help="Override daemon port from config")
+    parser.add_argument("--ssh-key",   metavar="FILE", help="Path to SSH private key for rsync operations")
     parser.add_argument("--config",    metavar="FILE", help="Path to CLI .config file")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose/debug output")
     parser.add_argument(
@@ -103,6 +104,8 @@ def _add_set_commands(sub: argparse._SubParsersAction) -> None:
 
     d = ss.add_parser("delete", help="Delete a backup set configuration")
     d.add_argument("name")
+    d.add_argument("--delete-remote", action="store_true",
+                   help="Also delete the backup set on the remote server (snapshots and diffs)")
 
     e = ss.add_parser("edit", help="Open backup set config in $EDITOR")
     e.add_argument("name")
@@ -243,6 +246,8 @@ def main() -> None:
         config.setdefault("server", {})["host"] = args.server
     if getattr(args, "port", None):
         config.setdefault("server", {})["port"] = args.port
+    if getattr(args, "ssh_key", None):
+        config.setdefault("server", {})["ssh_key_path"] = args.ssh_key
 
     # Daemon connection is required for backup, restore, and test commands
     needs_daemon = args.command in ("backup", "restore", "test")
