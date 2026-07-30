@@ -82,12 +82,12 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_test_command(sub)
     _add_show_command(sub)
 
+    return parser
 
 def _add_show_command(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("show", help="Show backup history for a set (server-side)")
     p.add_argument("name", help="Backup set name")
 
-    return parser
 
 
 def _add_set_commands(sub: argparse._SubParsersAction) -> None:
