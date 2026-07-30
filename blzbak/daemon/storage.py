@@ -15,6 +15,7 @@ import subprocess
 import logging
 import time
 import yaml
+import json
 from pathlib import Path
 from typing import Optional, List, Dict
 from dataclasses import dataclass
@@ -177,12 +178,15 @@ class StorageManager:
         
         # Write backup started metadata and append to backup.log now that
         # the server has finished preparation and is ready to receive the
-        # client's rsync into the C snapshot.
+        # client's rsync into the C snapshot. Also create a set.log entry
+        # (newest entries are at the top).
         try:
             started_iso = datetime.now(timezone.utc).isoformat()
             c_path.mkdir(parents=True, exist_ok=True)
             self._write_backup_started_metadata(set_name, started_iso)
             self._append_backup_log(set_name, f"Backup started: {started_iso}")
+            # add the set.log entry (new backup started)
+            self._create_set_log_entry_on_prepare(set_name, started_iso)
         except Exception as e:
             logger.warning(f"Failed to write backup started metadata for '{set_name}': {e}")
 
@@ -244,11 +248,102 @@ class StorageManager:
                     logger.debug(f"tar stderr: {stderr.decode()}")
             
             logger.info(f"Diff archive created: {diff_archive}")
+            # Update set.log to reflect the diff for the previous backup
+            try:
+                self._update_set_log_for_diff(set_name, diff_archive)
+            except Exception:
+                pass
             return diff_archive
             
         except subprocess.CalledProcessError as e:
             logger.error(f"rsync diff failed: {e.stderr}")
             raise RuntimeError(f"Failed to create diff: {e.stderr}")
+
+    def _load_set_log(self, set_name: str) -> List[Dict[str, any]]:
+        """Load the set.log entries as a list of dicts (newest first)."""
+        set_path = self.get_set_path(set_name)
+        log_path = set_path / "set.log"
+        entries: List[Dict[str, any]] = []
+        if not log_path.exists():
+            return entries
+        with open(log_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except Exception:
+                    # try to ignore malformed lines
+                    continue
+        return entries
+
+    def _write_set_log(self, set_name: str, entries: List[Dict[str, any]]) -> None:
+        set_path = self.get_set_path(set_name)
+        log_path = set_path / "set.log"
+        set_path.mkdir(parents=True, exist_ok=True)
+        # Write newest first
+        with open(log_path, "w") as f:
+            for entry in entries:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    def _create_set_log_entry_on_prepare(self, set_name: str, started_iso: str) -> None:
+        """Create a new set.log entry at prepare time (backup started).
+
+        New entries are prepended (newest first). The new entry contains
+        number, started_at, finished_at (None), location_type='C', location='C/'.
+        """
+        entries = self._load_set_log(set_name)
+        maxnum = 0
+        for e in entries:
+            try:
+                if isinstance(e.get("number"), int) and e["number"] > maxnum:
+                    maxnum = e["number"]
+            except Exception:
+                continue
+        newnum = maxnum + 1
+        new_entry = {
+            "number": newnum,
+            "started_at": started_iso,
+            "finished_at": None,
+            "location_type": "C",
+            "location": "C/",
+        }
+        # Prepend
+        entries.insert(0, new_entry)
+        self._write_set_log(set_name, entries)
+
+    def _update_set_log_for_diff(self, set_name: str, diff_path: Path) -> None:
+        """Update the previous backup entry to record the diff archive and
+        mark the previous C as now being O.
+        """
+        entries = self._load_set_log(set_name)
+        if len(entries) < 2:
+            # no previous entry to update
+            return
+        # previous entry is at index 1 (newest first)
+        prev = entries[1]
+        prev["diff_path"] = str(diff_path)
+        prev["location_type"] = "O"
+        prev["location"] = "O/"
+        entries[1] = prev
+        self._write_set_log(set_name, entries)
+
+    def _finalize_set_log_entry(self, set_name: str, finished_iso: str) -> None:
+        """Finalize the current (newest) set.log entry with finished time and
+        ensure older entries are updated to O as needed.
+        """
+        entries = self._load_set_log(set_name)
+        if not entries:
+            return
+        entries[0]["finished_at"] = finished_iso
+        entries[0]["location_type"] = "C"
+        entries[0]["location"] = "C/"
+        # Ensure second entry reflects O
+        if len(entries) >= 2:
+            entries[1]["location_type"] = "O"
+            entries[1]["location"] = "O/"
+        self._write_set_log(set_name, entries)
 
     def _append_backup_log(self, set_name: str, message: str) -> None:
         """Append a timestamped message to the per-set backup.log file."""
@@ -302,6 +397,11 @@ class StorageManager:
 
             # Append to backup.log
             self._append_backup_log(set_name, f"Backup finished: {finished_iso}")
+            # Finalize set.log entry
+            try:
+                self._finalize_set_log_entry(set_name, finished_iso)
+            except Exception:
+                pass
             return metadata
         except Exception as e:
             logger.warning(f"Failed to mark backup complete for '{set_name}': {e}")
