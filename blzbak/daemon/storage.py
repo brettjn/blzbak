@@ -16,6 +16,7 @@ import logging
 import time
 import yaml
 import json
+import gzip
 from pathlib import Path
 from typing import Optional, List, Dict
 from dataclasses import dataclass
@@ -200,64 +201,51 @@ class StorageManager:
         """
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         diff_dir = self.get_diff_dir(set_name)
-        diff_archive = diff_dir / f"diff_{timestamp}.tar.gz"
-        
-        # Use rsync to find files in O that differ from C
-        # rsync -an --delete O/ C/ shows what would be transferred from O to C
-        # These are files we need to preserve from O before overwriting it
+        diff_archive = diff_dir / f"diff_{timestamp}.patch.gz"
+
+        # Use unified recursive diff to create a patch from O -> C
+        # `diff -ruN O/ C/` returns 0 if identical, 1 if differences, >1 on error
+        diff_cmd = [
+            "diff",
+            "-ruN",
+            f"{o_path}",
+            f"{c_path}",
+        ]
         try:
             result = subprocess.run(
-                [
-                    "rsync",
-                    "-an",  # archive mode, dry-run
-                    "--delete",
-                    "--out-format=%n",
-                    f"{o_path}/",
-                    f"{c_path}/",
-                ],
+                diff_cmd,
                 capture_output=True,
                 text=True,
-                check=True,
             )
-            
-            # All files listed (including ones marked for deletion) need to be saved from O
-            changed_files = [
-                line.strip() for line in result.stdout.splitlines()
-                if line.strip() and not line.startswith("deleting ")
-            ]
-            
-            if not changed_files:
+
+            if result.returncode == 0:
                 logger.info("No differences found - O already matches C")
-                # Create an empty marker file
-                diff_archive.write_text(f"No changes at {timestamp}")
+                # create small marker gzip file to record no changes
+                diff_dir.mkdir(parents=True, exist_ok=True)
+                with gzip.open(diff_archive, "wt", encoding="utf-8") as gz:
+                    gz.write(f"# No changes at {timestamp}\n")
                 return diff_archive
-            
-            logger.info(f"Found {len(changed_files)} files to preserve from O")
-            
-            # Create tar archive of changed files from O
-            # We save the old versions from O before syncing C→O
-            with subprocess.Popen(
-                ["tar", "-czf", str(diff_archive), "-C", str(o_path)]
-                + changed_files,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            ) as proc:
-                stdout, stderr = proc.communicate()
-                if proc.returncode != 0:
-                    # Log any errors but don't fail - some files might have been deleted
-                    logger.debug(f"tar stderr: {stderr.decode()}")
-            
-            logger.info(f"Diff archive created: {diff_archive}")
+
+            if result.returncode > 1:
+                logger.error(f"diff failed: {result.stderr}")
+                raise RuntimeError(f"Failed to create diff: {result.stderr}")
+
+            # result.returncode == 1 -> diffs present
+            diff_dir.mkdir(parents=True, exist_ok=True)
+            with gzip.open(diff_archive, "wt", encoding="utf-8") as gz:
+                gz.write(result.stdout)
+
+            logger.info(f"Patch archive created: {diff_archive}")
             # Update set.log to reflect the diff for the previous backup
             try:
                 self._update_set_log_for_diff(set_name, diff_archive)
             except Exception:
                 pass
             return diff_archive
-            
-        except subprocess.CalledProcessError as e:
-            logger.error(f"rsync diff failed: {e.stderr}")
-            raise RuntimeError(f"Failed to create diff: {e.stderr}")
+
+        except OSError as e:
+            logger.error(f"Failed to run diff: {e}")
+            raise RuntimeError(f"Failed to create diff: {e}")
 
     def _load_set_log(self, set_name: str) -> List[Dict[str, any]]:
         """Load the set.log entries as a list of dicts (newest first)."""

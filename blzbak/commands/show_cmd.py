@@ -43,6 +43,11 @@ def cmd_show(args, config, client: DaemonClient) -> int:
     name = args.name
     try:
         entries = client.show_set(name)
+        # client.show_set previously returned entries only; support newer responses
+        sources = None
+        if isinstance(entries, dict):
+            sources = entries.get("source_paths")
+            entries = entries.get("entries", [])
     except DaemonError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 2
@@ -53,6 +58,16 @@ def cmd_show(args, config, client: DaemonClient) -> int:
     if not entries:
         print(f"No history found for set '{name}'")
         return 0
+
+    # Print sources being backed up
+    if sources:
+        if isinstance(sources, (list, tuple)):
+            print("Source paths:")
+            for s in sources:
+                print(f"  - {s}")
+        else:
+            print(f"Source: {sources}")
+        print()
 
     # entries are newest-first; list by number
     for entry in entries:

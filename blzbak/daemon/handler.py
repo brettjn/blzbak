@@ -289,7 +289,20 @@ class ProtocolHandler:
         try:
             # Use storage._load_set_log() to retrieve entries (list newest-first)
             entries = self.storage._load_set_log(set_name)
-            return {"status": "ok", "entries": entries}
+            # Load set metadata (source paths) if available
+            set_path = self.storage.get_set_path(set_name)
+            metadata_path = set_path / "metadata.yaml"
+            sources = None
+            if metadata_path.exists():
+                try:
+                    import yaml as _yaml
+                    with open(metadata_path, "r") as f:
+                        md = _yaml.safe_load(f) or {}
+                    sources = md.get("source_paths") or md.get("sources") or md.get("source")
+                except Exception:
+                    sources = None
+
+            return {"status": "ok", "entries": entries, "source_paths": sources}
         except Exception as e:
             logger.error(f"Failed to load set.log for '{set_name}': {e}")
             return self._error_response(f"Failed to load set.log: {e}")
