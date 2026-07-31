@@ -117,30 +117,35 @@ def cmd_files(args, config: dict, client: DaemonClient) -> int:
         print(f"Error: backup set '{set_name}' not found.", file=sys.stderr)
         return 1
     
-    # Expand folder path - try to find it within source paths
+    # Expand to absolute path
     folder_path = Path(folder).expanduser().resolve()
     
-    # Check if folder is within any source path
-    found_source = None
+    if not folder_path.exists():
+        print(f"Error: folder '{folder}' does not exist.", file=sys.stderr)
+        return 1
+    
+    # Find which source path contains this folder
+    source_path = None
+    rel_folder = None
+    
     for source in bs.source_paths:
-        source_path = Path(source).expanduser().resolve()
+        source_abs = Path(source).expanduser().resolve()
         try:
-            rel = folder_path.relative_to(source_path)
-            found_source = source_path
+            rel_folder = str(folder_path.relative_to(source_abs))
+            source_path = source_abs
             break
         except ValueError:
+            # folder_path is not relative to this source
             continue
     
-    if not found_source:
-        # Try as absolute path
-        if not folder_path.exists():
-            print(f"Error: folder '{folder}' not found and not within any source paths", file=sys.stderr)
-            print(f"Source paths: {', '.join(bs.source_paths)}", file=sys.stderr)
-            return 1
-        found_source = folder_path.parent
+    if source_path is None:
+        print(f"Error: folder '{folder}' is not within any backup source paths:", file=sys.stderr)
+        print(f"  Source paths: {', '.join(bs.source_paths)}", file=sys.stderr)
+        return 1
     
     # Gather local file metadata
     print(f"Scanning local folder: {folder_path}")
+    print(f"Relative path in backup: {rel_folder}")
     local_metadata = _gather_folder_metadata(folder_path)
     
     if not local_metadata:
@@ -149,20 +154,14 @@ def cmd_files(args, config: dict, client: DaemonClient) -> int:
     
     print(f"Found {len(local_metadata)} entries, comparing with backups...")
     
-    # Send request to server
+    # Send request to server with relative path
     try:
-        # Calculate relative path within the backup set
-        try:
-            rel_folder = str(folder_path.relative_to(found_source))
-        except ValueError:
-            rel_folder = str(folder_path)
-        
         response = client.files_diff(set_name, rel_folder, local_metadata)
         
         differences = response.get("differences", [])
         
         if not differences:
-            print(f"\nNo differences found across backups for '{folder}'")
+            print(f"\nNo differences found across backups for '{rel_folder}'")
             return 0
         
         print(f"\nFound {len(differences)} differences:\n")

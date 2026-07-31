@@ -93,7 +93,7 @@ def _add_show_command(sub: argparse._SubParsersAction) -> None:
 def _add_files_command(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("files", help="Show file/folder differences across backups")
     p.add_argument("name", help="Backup set name")
-    p.add_argument("folder", help="Folder path to analyze")
+    p.add_argument("folder", help="Absolute path to folder/file to analyze")
 
 
 def _add_set_commands(sub: argparse._SubParsersAction) -> None:
