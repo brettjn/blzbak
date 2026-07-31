@@ -81,6 +81,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_cron_commands(sub)
     _add_test_command(sub)
     _add_show_command(sub)
+    _add_files_command(sub)
 
     return parser
 
@@ -88,6 +89,11 @@ def _add_show_command(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("show", help="Show backup history for a set (server-side)")
     p.add_argument("name", help="Backup set name")
 
+
+def _add_files_command(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("files", help="Show file/folder differences across backups")
+    p.add_argument("name", help="Backup set name")
+    p.add_argument("folder", help="Folder path to analyze")
 
 
 def _add_set_commands(sub: argparse._SubParsersAction) -> None:
@@ -232,6 +238,10 @@ def _dispatch(args, config: dict, client) -> int:
         # Top-level show command: display history from server
         from .commands import show_cmd
         return show_cmd.cmd_show(args, config, client)
+    elif cmd == "files":
+        # Top-level files command: show file differences across backups
+        from .commands import files_cmd
+        return files_cmd.cmd_files(args, config, client)
 
     print(f"Internal error: unhandled command '{args.command}'", file=sys.stderr)
     return 1
@@ -259,8 +269,8 @@ def main() -> None:
     if getattr(args, "ssh_key", None):
         config.setdefault("server", {})["ssh_key_path"] = args.ssh_key
 
-    # Daemon connection is required for backup, restore, show, and test commands
-    needs_daemon = args.command in ("backup", "restore", "show", "test")
+    # Daemon connection is required for backup, restore, show, files, and test commands
+    needs_daemon = args.command in ("backup", "restore", "show", "files", "test")
     client: DaemonClient | None = None
 
     if needs_daemon and not getattr(args, "no_daemon", False):

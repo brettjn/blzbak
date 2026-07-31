@@ -41,6 +41,7 @@ class ProtocolHandler:
             Command.LIST_FILES: self._handle_list_files,
             Command.DELETE_SET: self._handle_delete_set,
             Command.SHOW_SET: self._handle_show_set,
+            Command.FILES_DIFF: self._handle_files_diff,
         }
 
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -306,6 +307,35 @@ class ProtocolHandler:
         except Exception as e:
             logger.error(f"Failed to load set.log for '{set_name}': {e}")
             return self._error_response(f"Failed to load set.log: {e}")
+
+    def _handle_files_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle FILES_DIFF command - compare local file metadata against backup history."""
+        set_name = request.get("set_name")
+        folder_path = request.get("folder_path")
+        local_metadata = request.get("local_metadata")
+        
+        if not set_name:
+            return self._error_response("Missing 'set_name' parameter")
+        if not folder_path:
+            return self._error_response("Missing 'folder_path' parameter")
+        if not local_metadata:
+            return self._error_response("Missing 'local_metadata' parameter")
+        
+        logger.info(f"Comparing files for '{folder_path}' in set '{set_name}'")
+        
+        try:
+            differences = self.storage.compare_files_across_backups(
+                set_name, folder_path, local_metadata
+            )
+            
+            return {
+                "status": "ok",
+                "differences": differences,
+                "folder_path": folder_path,
+            }
+        except Exception as e:
+            logger.error(f"Failed to compare files: {e}")
+            return self._error_response(f"Failed to compare files: {e}")
 
     # ------------------------------------------------------------------
     # Helper methods

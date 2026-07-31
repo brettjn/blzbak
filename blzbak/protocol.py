@@ -25,6 +25,7 @@ class Command:
     LIST_FILES       = "LIST_FILES"
     DELETE_SET       = "DELETE_SET"
     SHOW_SET         = "SHOW_SET"
+    FILES_DIFF       = "FILES_DIFF"
 
 
 def encode_message(data: dict) -> bytes:

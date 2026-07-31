@@ -17,8 +17,9 @@ import time
 import yaml
 import json
 import gzip
+import hashlib
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -654,3 +655,298 @@ class StorageManager:
             raise RuntimeError(f"Partial deletion completed with {len(result['errors'])} error(s)")
         
         return result
+
+    def compare_files_across_backups(
+        self, set_name: str, folder_path: str, local_metadata: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Compare local file metadata against backup history.
+        
+        Args:
+            set_name: Backup set name
+            folder_path: Relative path within backup set
+            local_metadata: Dict of {relative_path: metadata}
+            
+        Returns:
+            List of difference entries with backup numbers
+        """
+        differences = []
+        
+        # Load set.log to get backup numbers
+        entries = self._load_set_log(set_name)
+        if not entries:
+            logger.warning(f"No set.log entries found for '{set_name}'")
+            return differences
+        
+        # Build backup number map: {snapshot_type: backup_number}
+        # Most recent entry is at index 0
+        current_backup_num = entries[0].get("number", 1) if entries else 1
+        previous_backup_num = entries[1].get("number", 0) if len(entries) > 1 else 0
+        
+        c_path = self.get_snapshot_path(set_name, "C")
+        o_path = self.get_snapshot_path(set_name, "O")
+        
+        # 1. Compare local metadata against C
+        if c_path.exists():
+            c_diffs = self._compare_against_snapshot(
+                folder_path, local_metadata, c_path, current_backup_num, "current"
+            )
+            differences.extend(c_diffs)
+        
+        # 2. Compare C against O
+        if o_path.exists() and c_path.exists() and previous_backup_num:
+            o_diffs = self._compare_snapshots(
+                folder_path, c_path, o_path, previous_backup_num, "previous"
+            )
+            differences.extend(o_diffs)
+        
+        # 3. Parse patch files in reverse chronological order
+        diff_dir = self.get_diff_dir(set_name)
+        if diff_dir.exists():
+            # Get all patch files sorted by timestamp (newest first)
+            patch_files = sorted(
+                diff_dir.glob("diff_*.patch.gz"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            
+            # Match patch files with backup numbers from set.log
+            for idx, entry in enumerate(entries):
+                diff_path = entry.get("diff_path")
+                if diff_path and Path(diff_path).exists():
+                    backup_num = entry.get("number", 0)
+                    patch_diffs = self._parse_patch_for_folder(
+                        folder_path, Path(diff_path), backup_num
+                    )
+                    differences.extend(patch_diffs)
+        
+        return differences
+    
+    def _compare_against_snapshot(
+        self,
+        folder_path: str,
+        local_metadata: Dict[str, Any],
+        snapshot_path: Path,
+        backup_num: int,
+        label: str,
+    ) -> List[Dict[str, Any]]:
+        """Compare local files against a snapshot."""
+        differences = []
+        snapshot_folder = snapshot_path / folder_path.lstrip("/")
+        
+        if not snapshot_folder.exists():
+            # Folder doesn't exist in snapshot
+            for rel_path in local_metadata.keys():
+                differences.append({
+                    "backup_number": backup_num,
+                    "path": rel_path,
+                    "status": f"new (not in {label} backup)",
+                    "changes": {},
+                })
+            return differences
+        
+        # Check each local file against snapshot
+        for rel_path, local_meta in local_metadata.items():
+            snapshot_file = snapshot_folder / rel_path
+            
+            if not snapshot_file.exists():
+                differences.append({
+                    "backup_number": backup_num,
+                    "path": rel_path,
+                    "status": f"new (not in {label} backup)",
+                    "changes": {},
+                })
+                continue
+            
+            # Compare metadata
+            changes = {}
+            try:
+                snap_stat = snapshot_file.stat()
+                
+                # Compare size
+                if local_meta.get("size") != snap_stat.st_size:
+                    changes["size"] = {
+                        "before": snap_stat.st_size,
+                        "after": local_meta.get("size"),
+                    }
+                
+                # Compare mtime
+                if abs(local_meta.get("mtime", 0) - snap_stat.st_mtime) > 1:
+                    from datetime import datetime, timezone
+                    changes["modified_time"] = {
+                        "before": datetime.fromtimestamp(snap_stat.st_mtime, tz=timezone.utc).isoformat(),
+                        "after": datetime.fromtimestamp(local_meta.get("mtime", 0), tz=timezone.utc).isoformat(),
+                    }
+                
+                # Compare type
+                snap_is_dir = snapshot_file.is_dir()
+                local_is_dir = local_meta.get("type") == "dir"
+                if snap_is_dir != local_is_dir:
+                    changes["type"] = {
+                        "before": "dir" if snap_is_dir else "file",
+                        "after": local_meta.get("type"),
+                    }
+                
+                # Compare sha256 for files
+                if not local_is_dir and "sha256" in local_meta:
+                    snap_sha = self._calculate_sha256(snapshot_file)
+                    if snap_sha and snap_sha != local_meta["sha256"]:
+                        changes["data"] = {"message": "file content differs"}
+                
+                if changes:
+                    differences.append({
+                        "backup_number": backup_num,
+                        "path": rel_path,
+                        "status": "modified",
+                        "changes": changes,
+                    })
+            except (PermissionError, OSError) as e:
+                logger.debug(f"Error comparing {rel_path}: {e}")
+        
+        # Check for files in snapshot not in local
+        if snapshot_folder.is_dir():
+            try:
+                for snap_item in snapshot_folder.rglob("*"):
+                    rel_path = str(snap_item.relative_to(snapshot_folder))
+                    if rel_path not in local_metadata:
+                        differences.append({
+                            "backup_number": backup_num,
+                            "path": rel_path,
+                            "status": f"deleted (exists in {label} backup)",
+                            "changes": {},
+                        })
+            except (PermissionError, OSError) as e:
+                logger.debug(f"Error scanning snapshot: {e}")
+        
+        return differences
+    
+    def _compare_snapshots(
+        self,
+        folder_path: str,
+        c_path: Path,
+        o_path: Path,
+        backup_num: int,
+        label: str,
+    ) -> List[Dict[str, Any]]:
+        """Compare two snapshots to find differences."""
+        differences = []
+        c_folder = c_path / folder_path.lstrip("/")
+        o_folder = o_path / folder_path.lstrip("/")
+        
+        if not o_folder.exists():
+            return differences
+        
+        if not c_folder.exists():
+            # Folder was deleted
+            differences.append({
+                "backup_number": backup_num,
+                "path": folder_path,
+                "status": f"folder deleted (existed in {label} backup)",
+                "changes": {},
+            })
+            return differences
+        
+        # Compare files in O against C
+        try:
+            for o_item in o_folder.rglob("*"):
+                rel_path = str(o_item.relative_to(o_folder))
+                c_item = c_folder / rel_path
+                
+                if not c_item.exists():
+                    differences.append({
+                        "backup_number": backup_num,
+                        "path": rel_path,
+                        "status": f"deleted between backups #{backup_num} and #{backup_num+1}",
+                        "changes": {},
+                    })
+                    continue
+                
+                # Compare metadata
+                changes = {}
+                o_stat = o_item.stat()
+                c_stat = c_item.stat()
+                
+                if o_stat.st_size != c_stat.st_size:
+                    changes["size"] = {
+                        "before": o_stat.st_size,
+                        "after": c_stat.st_size,
+                    }
+                
+                if o_item.is_file() and c_item.is_file():
+                    o_sha = self._calculate_sha256(o_item)
+                    c_sha = self._calculate_sha256(c_item)
+                    if o_sha and c_sha and o_sha != c_sha:
+                        changes["data"] = {"message": "file content differs"}
+                
+                if changes:
+                    differences.append({
+                        "backup_number": backup_num,
+                        "path": rel_path,
+                        "status": "modified",
+                        "changes": changes,
+                    })
+        except (PermissionError, OSError) as e:
+            logger.debug(f"Error comparing snapshots: {e}")
+        
+        return differences
+    
+    def _parse_patch_for_folder(
+        self, folder_path: str, patch_file: Path, backup_num: int
+    ) -> List[Dict[str, Any]]:
+        """Parse a patch file to find changes in the specified folder."""
+        differences = []
+        
+        try:
+            import gzip
+            import re
+            
+            with gzip.open(patch_file, "rt", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            
+            # Parse unified diff format
+            # Look for lines like: diff -ruN /path/O/file /path/C/file
+            diff_pattern = re.compile(r"^diff -ruN (.+?) (.+?)$", re.MULTILINE)
+            
+            for match in diff_pattern.finditer(content):
+                o_file = match.group(1)
+                c_file = match.group(2)
+                
+                # Extract relative path (remove snapshot prefix)
+                # Paths in diff look like: /blzbak/setname/O/folder/file
+                for path_str in [o_file, c_file]:
+                    if "/O/" in path_str:
+                        rel_path = path_str.split("/O/", 1)[1]
+                    elif "/C/" in path_str:
+                        rel_path = path_str.split("/C/", 1)[1]
+                    else:
+                        continue
+                    
+                    # Check if this file is within our target folder
+                    if rel_path.startswith(folder_path.lstrip("/")):
+                        # Extract just the portion within the folder
+                        folder_rel = rel_path[len(folder_path.lstrip("/")):].lstrip("/")
+                        if folder_rel:
+                            differences.append({
+                                "backup_number": backup_num,
+                                "path": folder_rel,
+                                "status": "changed in diff",
+                                "changes": {"data": {"message": "file modified"}},
+                            })
+                            break  # Only add once per file
+        
+        except Exception as e:
+            logger.warning(f"Error parsing patch {patch_file}: {e}")
+        
+        return differences
+    
+    def _calculate_sha256(self, file_path: Path) -> str:
+        """Calculate SHA256 hash of a file."""
+        try:
+            sha = hashlib.sha256()
+            with open(file_path, "rb") as f:
+                while chunk := f.read(8192):
+                    sha.update(chunk)
+            return sha.hexdigest()
+        except (PermissionError, OSError) as e:
+            logger.debug(f"Cannot hash {file_path}: {e}")
+            return ""
+
