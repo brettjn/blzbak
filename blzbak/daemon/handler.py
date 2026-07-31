@@ -18,6 +18,7 @@ sys.path.insert(0, '/home/blizz/proj/blzbak/blzbak')
 from blzbak.protocol import Command
 
 from .storage import StorageManager
+import json
 
 
 logger = logging.getLogger(__name__)
@@ -322,6 +323,18 @@ class ProtocolHandler:
             return self._error_response("Missing 'local_metadata' parameter")
         
         logger.info(f"Comparing files for '{folder_path}' in set '{set_name}'")
+        # Log received local metadata to aid debugging (writes to info.log)
+        try:
+            logger.info(
+                "Received local_metadata: %s",
+                json.dumps({k: v for k, v in (local_metadata or {}).items()}, sort_keys=True),
+            )
+        except Exception:
+            # Fallback: log basic summary
+            try:
+                logger.info("Received local_metadata with %d entries", len(local_metadata or {}))
+            except Exception:
+                logger.info("Received local_metadata (could not serialize details)")
         
         try:
             differences = self.storage.compare_files_across_backups(
