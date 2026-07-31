@@ -657,7 +657,7 @@ class StorageManager:
         return result
 
     def compare_files_across_backups(
-        self, set_name: str, folder_path: str, local_metadata: Dict[str, Any]
+        self, set_name: str, folder_path: str, local_metadata: Dict[str, Any], source_path: str = None
     ) -> List[Dict[str, Any]]:
         """Compare local file metadata against backup history.
         
@@ -687,10 +687,43 @@ class StorageManager:
         
         # 1. Compare local metadata against C
         if c_path.exists():
-            c_diffs = self._compare_against_snapshot(
-                folder_path, local_metadata, c_path, current_backup_num, "current"
-            )
-            differences.extend(c_diffs)
+            # Determine candidate folder mapping using provided source_path
+            mapped_folder = folder_path
+            # If client provided the absolute source path, try mapping into snapshot
+            try:
+                if source_path:
+                    # Common case: snapshot contains the basename of the source path
+                    sp_name = Path(source_path).name
+                    # If folder_path is '.' or empty, map to snapshot/<basename>
+                    if folder_path in ("", "."):
+                        candidate = c_path / sp_name
+                    else:
+                        candidate = c_path / sp_name / folder_path.lstrip("/")
+                    if candidate.exists():
+                        # Use mapping where files actually reside in snapshot
+                        mapped_folder = str(Path(sp_name) / Path(folder_path)) if folder_path not in ("", ".") else sp_name
+                        logger.debug(f"Mapped client folder '{folder_path}' with source '{source_path}' to snapshot path '{mapped_folder}'")
+                        c_diffs = self._compare_against_snapshot(
+                            mapped_folder, local_metadata, c_path, current_backup_num, "current"
+                        )
+                        differences.extend(c_diffs)
+                    else:
+                        # Fall back to direct folder_path
+                        c_diffs = self._compare_against_snapshot(
+                            folder_path, local_metadata, c_path, current_backup_num, "current"
+                        )
+                        differences.extend(c_diffs)
+                else:
+                    c_diffs = self._compare_against_snapshot(
+                        folder_path, local_metadata, c_path, current_backup_num, "current"
+                    )
+                    differences.extend(c_diffs)
+            except Exception as e:
+                logger.debug(f"Error mapping source_path for comparison: {e}")
+                c_diffs = self._compare_against_snapshot(
+                    folder_path, local_metadata, c_path, current_backup_num, "current"
+                )
+                differences.extend(c_diffs)
         
         # 2. Compare C against O
         if o_path.exists() and c_path.exists() and previous_backup_num:
@@ -734,7 +767,29 @@ class StorageManager:
         snapshot_folder = snapshot_path / folder_path.lstrip("/")
         
         if not snapshot_folder.exists():
-            # Folder doesn't exist in snapshot
+            # Attempt to locate the folder within the snapshot in case layout differs.
+            # e.g., client sent a relative path that may be nested differently in C/.
+            try:
+                target_suffix = folder_path.lstrip("/")
+                found = None
+                for candidate in snapshot_path.rglob("*"):
+                    if candidate.is_dir():
+                        try:
+                            rel = str(candidate.relative_to(snapshot_path))
+                        except Exception:
+                            rel = None
+                        if rel and rel.endswith(target_suffix):
+                            found = candidate
+                            break
+                if found:
+                    logger.debug(f"Located snapshot folder for '{folder_path}' at '{found}'")
+                    snapshot_folder = found
+            except Exception as e:
+                logger.debug(f"Error while searching snapshot for '{folder_path}': {e}")
+
+        # After attempting to find it, if the folder still doesn't exist,
+        # treat all local entries as new.
+        if not snapshot_folder.exists():
             for rel_path, local_meta in local_metadata.items():
                 differences.append({
                     "backup_number": backup_num,

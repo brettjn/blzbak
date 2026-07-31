@@ -201,7 +201,7 @@ def cmd_files(args, config: dict, client: DaemonClient) -> int:
     
     # Send request to server with relative path
     try:
-        response = client.files_diff(set_name, rel_folder, local_metadata)
+        response = client.files_diff(set_name, rel_folder, local_metadata, source_path=str(source_path))
         
         differences = response.get("differences", [])
         

@@ -182,7 +182,7 @@ class DaemonClient:
         resp = self._request({"cmd": Command.SHOW_SET, "set_name": set_name})
         return resp.get("entries", [])
 
-    def files_diff(self, set_name: str, folder_path: str, local_metadata: dict) -> dict:
+    def files_diff(self, set_name: str, folder_path: str, local_metadata: dict, source_path: str = None) -> dict:
         """Compare local file metadata with backup history.
         
         Args:
@@ -194,12 +194,16 @@ class DaemonClient:
             Response dict with differences across all backups
         """
         logger.info("Requesting file differences for '%s' in '%s'", folder_path, set_name)
-        return self._request({
+        payload = {
             "cmd": Command.FILES_DIFF,
             "set_name": set_name,
             "folder_path": folder_path,
             "local_metadata": local_metadata,
-        })
+        }
+        if source_path:
+            payload["source_path"] = source_path
+
+        return self._request(payload)
 
     def create_set(self, set_name: str, metadata: dict) -> dict:
         """Create a backup set on the server with metadata.

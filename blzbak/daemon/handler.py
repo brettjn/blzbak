@@ -314,6 +314,7 @@ class ProtocolHandler:
         set_name = request.get("set_name")
         folder_path = request.get("folder_path")
         local_metadata = request.get("local_metadata")
+        source_path = request.get("source_path")
         
         if not set_name:
             return self._error_response("Missing 'set_name' parameter")
@@ -338,7 +339,7 @@ class ProtocolHandler:
         
         try:
             differences = self.storage.compare_files_across_backups(
-                set_name, folder_path, local_metadata
+                set_name, folder_path, local_metadata, source_path=source_path
             )
             
             return {
