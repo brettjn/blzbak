@@ -3,6 +3,10 @@
 import os
 import sys
 import hashlib
+import stat
+import pwd
+import grp
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -86,22 +90,63 @@ def _format_diff_entry(entry: Dict[str, Any]) -> str:
     path = entry.get("path", "")
     status = entry.get("status", "")
     
-    header = f"[Backup #{backup_num}] {path}"
+    # Header format: [<backup number>] path
+    header = f"[{backup_num}] {path}"
     if status:
         header += f" ({status})"
     lines.append(header)
-    
-    changes = entry.get("changes", {})
-    if changes:
-        for key, change in changes.items():
-            before = change.get("before")
-            after = change.get("after")
-            if before is not None and after is not None:
-                lines.append(f"  {key}: {before} -> {after}")
-            elif "message" in change:
-                lines.append(f"  {key}: {change['message']}")
-            else:
-                lines.append(f"  {key}: {change}")
+    # Try to show ls -l style metadata for the file as it existed in the
+    # backup (before_meta) or as it exists locally (after_meta).
+    def format_ls_long(meta: Dict[str, Any], name: str) -> str:
+        try:
+            mode = meta.get("mode", 0)
+            perm = stat.filemode(mode)
+        except Exception:
+            perm = "?---------"
+
+        nlink = meta.get("nlink", 1)
+        uid = meta.get("uid")
+        gid = meta.get("gid")
+        try:
+            owner = pwd.getpwuid(uid).pw_name if uid is not None else "?"
+        except Exception:
+            owner = str(uid) if uid is not None else "?"
+        try:
+            group = grp.getgrgid(gid).gr_name if gid is not None else "?"
+        except Exception:
+            group = str(gid) if gid is not None else "?"
+
+        size = meta.get("size", 0)
+        mtime = meta.get("mtime", 0)
+        try:
+            ts = datetime.fromtimestamp(mtime)
+            mtime_str = ts.strftime("%b %d %H:%M")
+        except Exception:
+            mtime_str = "?"
+
+        return f"  {perm} {nlink:3} {owner} {group} {size:8} {mtime_str} {name}"
+
+    before_meta = entry.get("before_meta")
+    after_meta = entry.get("after_meta")
+
+    if before_meta:
+        lines.append(format_ls_long(before_meta, path))
+        # If there is also an after_meta, show it as the new version
+        if after_meta:
+            lines.append("   ->")
+            lines.append(format_ls_long(after_meta, path))
+    elif after_meta:
+        # No snapshot metadata available; show local file metadata
+        lines.append(format_ls_long(after_meta, path))
+    else:
+        # Fallback: show any change messages
+        changes = entry.get("changes", {})
+        if changes:
+            for key, change in changes.items():
+                if isinstance(change, dict) and "message" in change:
+                    lines.append(f"  {key}: {change['message']}")
+                else:
+                    lines.append(f"  {key}: {change}")
     
     return "\n".join(lines)
 

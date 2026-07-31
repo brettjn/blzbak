@@ -735,12 +735,13 @@ class StorageManager:
         
         if not snapshot_folder.exists():
             # Folder doesn't exist in snapshot
-            for rel_path in local_metadata.keys():
+            for rel_path, local_meta in local_metadata.items():
                 differences.append({
                     "backup_number": backup_num,
                     "path": rel_path,
                     "status": f"new (not in {label} backup)",
                     "changes": {},
+                    "after_meta": local_meta,
                 })
             return differences
         
@@ -754,6 +755,7 @@ class StorageManager:
                     "path": rel_path,
                     "status": f"new (not in {label} backup)",
                     "changes": {},
+                    "after_meta": local_meta,
                 })
                 continue
             
@@ -793,11 +795,23 @@ class StorageManager:
                         changes["data"] = {"message": "file content differs"}
                 
                 if changes:
+                    # Include metadata snapshots for before/after where possible
+                    before_meta = {
+                        "type": "dir" if snapshot_file.is_dir() else "file",
+                        "size": snap_stat.st_size,
+                        "mtime": snap_stat.st_mtime,
+                        "mode": snap_stat.st_mode,
+                        "uid": snap_stat.st_uid,
+                        "gid": snap_stat.st_gid,
+                    }
+
                     differences.append({
                         "backup_number": backup_num,
                         "path": rel_path,
                         "status": "modified",
                         "changes": changes,
+                        "before_meta": before_meta,
+                        "after_meta": local_meta,
                     })
             except (PermissionError, OSError) as e:
                 logger.debug(f"Error comparing {rel_path}: {e}")
@@ -808,11 +822,26 @@ class StorageManager:
                 for snap_item in snapshot_folder.rglob("*"):
                     rel_path = str(snap_item.relative_to(snapshot_folder))
                     if rel_path not in local_metadata:
+                        # Capture snapshot metadata for deleted items
+                        try:
+                            s_stat = snap_item.stat()
+                            before_meta = {
+                                "type": "dir" if snap_item.is_dir() else "file",
+                                "size": s_stat.st_size,
+                                "mtime": s_stat.st_mtime,
+                                "mode": s_stat.st_mode,
+                                "uid": s_stat.st_uid,
+                                "gid": s_stat.st_gid,
+                            }
+                        except Exception:
+                            before_meta = None
+
                         differences.append({
                             "backup_number": backup_num,
                             "path": rel_path,
                             "status": f"deleted (exists in {label} backup)",
                             "changes": {},
+                            "before_meta": before_meta,
                         })
             except (PermissionError, OSError) as e:
                 logger.debug(f"Error scanning snapshot: {e}")
